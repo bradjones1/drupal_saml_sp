@@ -1,0 +1,119 @@
+<?php
+/**
+ * @file
+ * SAML Service Provider
+ *
+ * Allow users to log in to Drupal via a third-party SAML Identity Provider.
+ * Users authenticate to the third-party SAML IDP (e.g. http://idp.example.com)
+ * and a series of redirects allows that authentication to be recognised in
+ * Drupal.
+ *
+ * Uses the OneLogin PHP-SAML toolkit: https://github.com/onelogin/php-saml
+ */
+
+// Path to this directory. Requires PHP 5.3 or greater.
+define('DRUPAL_SAML_SP__HOME', __DIR__);
+
+// Default name to identify this application to IDPs.
+define('DRUPAL_SAML_SP__APP_NAME_DEFAULT', 'drupal-saml-sp');
+
+
+/**
+ * Implements hook_permission().
+ */
+function saml_sp_permission() {
+  return array(
+    'configure saml sp' => array(
+      'title' => t('Configure SAML SP'), 
+      'description' => t('Configure the SAML Service Provider integration.'),
+      'restrict access' => TRUE,
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function saml_sp_menu() {
+  $items = array();
+  $items['admin/config/people/saml_sp'] = array(
+    'title' => 'SAML SP',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('saml_sp__admin_config_form'),
+    'access arguments' => array('configure saml sp'),
+    'file' => 'saml_sp.admin.inc',
+  );
+  $items['admin/config/people/saml/IDP_details'] = array(
+    'title' => 'IDP',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+
+  // SAML start. Triggers an authentication request.
+  $items['saml_start'] = array(
+    'title' => 'SAML start',
+    'page callback' => 'saml_sp__start',
+    // This endpoint should not be under access control.
+    'access callback' => TRUE,
+    'file' => 'saml_sp.pages.inc',
+    'type' => MENU_CALLBACK,
+  );
+
+  // SAML endpoint. Once identity-negotation is complete, the IDP will redirect
+  // the user to this page; the framework will check the GET query-string
+  // parameters to authenticate user, and log the user in if appropriate.
+  // This URL does not provide any (human-readable) output.
+  $items['saml_endpoint'] = array(
+    'title' => 'SAML endpoint',
+    'page callback' => 'saml_sp__endpoint',
+    // This endpoint should not be under access control.
+    'access callback' => TRUE,
+    'file' => 'saml_sp.pages.inc',
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+/**
+ * Load the required OneLogin SAML-PHP toolkit files.
+ */
+function _saml_sp__prepare() {
+  static $has_run = FALSE;
+  if (!$has_run) {
+    require_once DRUPAL_SAML_SP__HOME . '/lib/ext/xmlseclibs/xmlseclibs.php';
+    require_once DRUPAL_SAML_SP__HOME . '/lib/src/OneLogin/Saml/AuthRequest.php';
+    require_once DRUPAL_SAML_SP__HOME . '/lib/src/OneLogin/Saml/Response.php';
+    require_once DRUPAL_SAML_SP__HOME . '/lib/src/OneLogin/Saml/Settings.php';
+    require_once DRUPAL_SAML_SP__HOME . '/lib/src/OneLogin/Saml/XmlSec.php';
+
+    $has_run = TRUE;
+  }
+}
+
+/**
+ * Get the SAML settings.
+ */
+function saml_sp__get_settings() {
+  // Require all the relevant libraries.
+  _saml_sp__prepare();
+
+  $settings = new OneLogin_Saml_Settings();
+
+  // URL of the IDP server.
+  $settings->idpSingleSignOnUrl = variable_get('saml_sp__idp_url', '');
+
+  // The IDP's public x.509 certificate.
+  $settings->idpPublicCertificate = variable_get('saml_sp__x509_cert', '');
+
+  // Name to identify this application
+  $settings->spIssuer = variable_get('saml_sp__app_name', DRUPAL_SAML_SP__APP_NAME_DEFAULT);
+
+
+  // Drupal URL to consume the response from the IDP.
+  $settings->spReturnUrl = url('saml_sp_endpoint', array('absolute' => TRUE));
+
+  // Tells the IdP to return the email address of the current user
+  $settings->requestedNameIdFormat = OneLogin_Saml_Settings::NAMEID_EMAIL_ADDRESS;
+
+  return $settings;
+}
