@@ -1,10 +1,17 @@
 SAML Service Provider
 =====================
 
-This module allows Drupal to become a "Service Provider" for SAML.
+This package provides two modules:
+- SAML Service Provider API
+- SAML Drupal Login
 
-This means that users can authenticate to Drupal (without entering a username
-or password) by delegating authenticate to a SAML IDP (Identity Provider).
+
+The API module lets other modules leverage SAML authentication.
+
+The SAML Drupal Login module specifically enables Drupal to become a "Service
+Provider" for an IDP, so users can authenticate to Drupal (without entering a
+username or password) by delegating authenticate to a SAML IDP (Identity
+Provider).
 
 
 Dependencies

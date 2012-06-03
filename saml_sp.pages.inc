@@ -4,18 +4,6 @@
  * User pages for the SAML Service Provider module.
  */
 
-/**
- * Page callback to trigger the SAML authentication process.
- */
-function saml_sp__start() {
-  $settings = saml_sp__get_settings();
-
-  $authRequest = new OneLogin_Saml_AuthRequest($settings);
-  $url = $authRequest->getRedirectUrl();
-
-  // Redirect the user to the IDP.
-  header("Location: $url");
-}
 
 /**
  * Page callback to complete the SAML authentication process.
