@@ -1,0 +1,9 @@
+<?php
+
+/**
+ * @file
+ * SAML Drupal Login
+ *
+ * Uses the SAML Service Provider module to provide a Drupal-login
+ * authentication module.
+ */
