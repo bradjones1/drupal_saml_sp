@@ -6,12 +6,15 @@
 
 
 /**
- * Alter the settings used to generate SAML requests.
+ * Alter the settings used when generating SAML requests.
  *
  * @param OneLogin_Saml_Settings $settings
  */
 function hook_saml_sp_settings_alter(&$settings) {
-  
+  // Change the consuming URL to a custom endpoint.
+  if ($settings->login_url == 'http://example.com/saml/foo') {
+    $settings->spReturnUrl = url('saml/custom_action', array('absolute' => TRUE));
+  }
 }
 
 /**
