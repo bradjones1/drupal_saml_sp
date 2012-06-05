@@ -17,6 +17,9 @@ define('DRUPAL_SAML_SP__HOME', __DIR__);
 // Default name to identify this application to IDPs.
 define('DRUPAL_SAML_SP__APP_NAME_DEFAULT', 'drupal-saml-sp');
 
+// Expect a response from the IDP within 2 minutes.
+define('SAML_SP_REQUEST_CACHE_TIMEOUT', 120);
+
 /**
  * Implements hook_theme().
  */
@@ -101,22 +104,23 @@ function saml_sp_menu() {
 
 
 
-  // Default SAML endpoint/
-  // Once identity-negotation is complete, the IDP will redirect the user to
-  // this page; Drupal and the SAML component will check the response to
-  // validate the data, and invoke the action to respond with authentication
-  // data.
-  // This URL does not provide any (human-readable) output.
+  // SAML endpoint for all requests.
+  // Some IDPs ignore the URL provided in the authentication request
+  // (the AssertionConsumerServiceURL attribute) and hard-code a return URL in
+  // their configuration, therefore all modules using SAML SP will have the
+  // same consumer endpoint: /saml/consume.
+
+  // A unique ID is generated for each outbound request, and responses are
+  // expected to reference this ID in the `inresponseto` attribute of the
+  // `<samlp:response` XML node.
+
   $items['saml/consume'] = array(
-    'title' => 'Default SAML endpoint',
     'page callback' => 'saml_sp__endpoint',
     // This endpoint should not be under access control.
     'access callback' => TRUE,
     'file' => 'saml_sp.pages.inc',
     'type' => MENU_CALLBACK,
   );
-
-
   return $items;
 }
 
@@ -219,14 +223,15 @@ function saml_sp__load_all_idps() {
  * @return OneLogin_Saml_Settings
  * IDP Settings data.
  */
-function saml_sp__get_settings($idp, $endpoint = NULL) {
+function saml_sp__get_settings($idp) {
   // Require all the relevant libraries.
   _saml_sp__prepare();
 
 
-  if (is_null($endpoint)) {
-    $endpoint = saml_sp__get_endpoint();
-  }
+  // The consumer endpoint will always be /saml/consume.
+  $endpoint_url = url("saml/consume", array('absolute' => TRUE));
+
+
 
   $settings = new OneLogin_Saml_Settings();
 
@@ -241,7 +246,7 @@ function saml_sp__get_settings($idp, $endpoint = NULL) {
 
 
   // Drupal URL to consume the response from the IDP.
-  $settings->spReturnUrl = $endpoint;
+  $settings->spReturnUrl = $endpoint_url;
 
   // Tells the IdP to return the email address of the current user
   $settings->requestedNameIdFormat = OneLogin_Saml_Settings::NAMEID_EMAIL_ADDRESS;
@@ -260,32 +265,70 @@ function saml_sp__get_settings($idp, $endpoint = NULL) {
 
 
 /**
- * Get the default SAML endpoint available.
- *
- * @return String
- * A fully-qualified domain name, for the SAML consumer, which receives data
- * from the IDP and validates it to authenticate a user.
- */
-function saml_sp__get_endpoint() {
-  return url('saml/consumer', array('absolute' => TRUE));
-}
-
-/**
  * Start a SAML authentication request.
  *
  * @param Object $idp
+ * @param String $callback
+ * A function to call with the results of the SAML authentication process.
  */
-function saml_sp_start($idp) {
+function saml_sp_start($idp, $callback) {
+  // Settings is a OneLogin_Saml_Settings object.
   $settings = saml_sp__get_settings($idp);
+
 
   $authRequest = new OneLogin_Saml_AuthRequest($settings);
   $url = $authRequest->getRedirectUrl();
+
+  // Track the ID of the outbound request.
+  $prefix_length = strlen($settings->idpSingleSignOnUrl . "?SAMLRequest=");
+  $id = _saml_sp__extract_outbound_id(substr($url, $prefix_length));
+  saml_sp__track_request($id, $idp, $callback);
 
   // Redirect the user to the IDP.
   header("Location: $url");
 }
 
+/**
+ * Track an outbound request.
+ *
+ * @param String $id
+ * The unique ID of an outbound request.
+ * $param Object $idp
+ * IDP data.
+ * @param String $callback
+ * The function to invoke on completion of a SAML authentication request.
+ */
+function saml_sp__track_request($id, $idp, $callback) {
+  $data = array(
+    'id' => $id,
+    'idp' => $idp->machine_name,
+    'callback' => $callback,
+  );
 
+  $expire = REQUEST_TIME + SAML_SP_REQUEST_CACHE_TIMEOUT;
+  cache_set($id, $data, 'saml_sp_request_tracking_cache', $expire);
+}
+
+
+/**
+ * Get the IDP and callback from a tracked request.
+ *
+ *
+ * @param String $id
+ * The unique ID of an outbound request.
+ *
+ * @return Array|FALSE
+ * An array of tracked data, giving the keys:
+ * - id       The original outbound ID.
+ * - idp      The machine name of the IDP.
+ * - callback The function to invoke on authentication.
+ */
+function saml_sp__get_tracked_request($id) {
+  if ($cache = cache_get($id, 'saml_sp_request_tracking_cache')) {
+    return $cache->data;
+  }
+  return FALSE;
+}
 
 /******************************************************************************
  * Internal helper functions.
@@ -322,3 +365,62 @@ function _saml_sp__prepare() {
   }
 }
 
+/**
+ * Extract the unique ID of an outbound request.
+ *
+ * @param String $encoded_url
+ * The response of OneLogin_Saml_AuthRequest::getRedirectUrl(), which is
+ * multiple-encoded.
+ *
+ * @return String|FALSE
+ * The unique ID of the outbound request, if it can be decoded.
+ * This will be OneLogin_Saml_AuthRequest::ID_PREFIX, followed by a sha1 hash.
+ */
+function _saml_sp__extract_outbound_id($encoded_url) {
+  $string = $encoded_url;
+  $string = @urldecode($string);
+  $string = @base64_decode($string);
+  $string = @gzinflate($string);
+
+  // This regex is based on the prelude provided in
+  // OneLogin_Saml_AuthRequest::getRedirectUrl().
+  $regex = '/^<samlp:AuthnRequest
+    xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
+    xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
+    ID="(' . OneLogin_Saml_AuthRequest::ID_PREFIX . '[0-9a-f]{40})"/m';
+
+  $result = FALSE;
+  if (preg_match($regex, $string, $matches)) {
+    $result = $matches[1];
+  }
+
+  return $result;
+}
+
+/**
+ * Extract the unique ID in an inbound request.
+ *
+ * @param String $assertion
+ * UUEncoded SAML assertion from the IdP (i.e. the POST request).
+ *
+ * @return String|FALSE
+ * The unique ID of the inbound request, if it can be decoded.
+ * This will be OneLogin_Saml_AuthRequest::ID_PREFIX, followed by a sha1 hash.
+ */
+function _saml_sp__extract_inbound_id($assertion) {
+  // Decode the request.
+  $xml = base64_decode($assertion);
+
+  // Load the XML.
+  $document = new DOMDocument();
+  if ($document->loadXML($xml)) {
+    try {
+      $id = @$document->firstChild->attributes->getNamedItem('InResponseTo')->value;
+      return $id;
+    }
+    catch (Exception $e) {
+      return FALSE;
+    }
+  }
+  return FALSE;
+}
