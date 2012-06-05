@@ -60,6 +60,7 @@ function saml_sp_menu() {
   $items['admin/config/people/saml_sp/IDP'] = array(
     'title' => 'Identiy Providers',
     'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
   );
 
   // Add a new IDP.
