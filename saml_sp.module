@@ -197,38 +197,11 @@ function saml_sp_idp_delete($idp_machine_name) {
  * An array of IDP objects, keyed by the machine name.
  */
 function saml_sp__load_all_idps() {
-
   // Use CTools export API to fetch all presets.
   ctools_include('export');
   $result = ctools_export_crud_load_all('saml_sp_idps');
   return $result;
-
-// 
-//   $idps = array();
-//   $idps['one_login'] = (object) array(
-//     'name' => 'One Login',
-//     'machine_name' => 'one_login',
-//     'app_name' => NULL,
-//     'login_url' => 'https://app.onelogin.com/saml/signon/44758',
-//     'x509_cert' => "-----BEGIN CERTIFICATE-----
-// MIICMTCCAiWgAwIBAgIBATADBgEAMGcxCzAJBgNVBAYTAlVTMRMwEQYDVQQIDApD
-// YWxpZm9ybmlhMRUwEwYDVQQHDAxTYW50YSBNb25pY2ExETAPBgNVBAoMCE9uZUxv
-// Z2luMRkwFwYDVQQDDBBhcHAub25lbG9naW4uY29tMB4XDTEyMDUzMDIxMjYwNFoX
-// DTE3MDUzMDIxMjYwNFowZzELMAkGA1UEBhMCVVMxEzARBgNVBAgMCkNhbGlmb3Ju
-// aWExFTATBgNVBAcMDFNhbnRhIE1vbmljYTERMA8GA1UECgwIT25lTG9naW4xGTAX
-// BgNVBAMMEGFwcC5vbmVsb2dpbi5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAw
-// ggEKAoIBAQCdl6qnXyaNVnY4/MC4pQZhiybqfymbjHj6CxDN7NfbafwXcDmoJ2ey
-// YVcjUvD0h22Oh9+hSluIDkx9v74sR6lcoyIgdOnzpHaRoTDN9n702G7wQOaA4fl2
-// gbBuS/W3uSbKVgsi/ZhlA1AYymVNE7Vd9a/B8tBOm9zySHVbPOaXRaukpbgvJ4cb
-// ZIbKAw7BST25BsNDdsIZkxGFMygkajgrW2dZupz3zOmdM4XctSPTtFJCv7rUJk+Q
-// Vqx+DlKd3Oo8C/v174xWFU/y3LvWs5ojGrMok2ESZul1DnJRKHu3U8QbHu07atRQ
-// /JWoHVfH/k1zX8rMD/q4yT51l8ynjCerAgMBAAEwAwYBAAMBAA==
-// -----END CERTIFICATE-----",
-//   );
-// 
-//   return $idps;
 }
-
 
 
 
