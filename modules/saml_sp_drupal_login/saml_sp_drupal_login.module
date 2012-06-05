@@ -7,3 +7,79 @@
  * Uses the SAML Service Provider module to provide a Drupal-login
  * authentication module.
  */
+
+/**
+ * Implements hook_menu().
+ */
+function saml_sp_drupal_login_menu() {
+  $items = array();
+  // Admin form to configure which IDP to use.
+  $items['admin/config/people/saml_sp/drupal_login'] = array(
+    'title' => 'Drupal login',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('saml_sp_drupal_login__admin_config_form'),
+    'access arguments' => array('configure saml sp'),
+    'file' => 'saml_sp_drupal_login.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+  );
+  // URL to trigger the authentication process.
+  $items['saml/drupal_login'] = array(
+    'page callback' => 'saml_sp_drupal_login__start',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function saml_sp_drupal_login_form_user_login_block_alter(&$form, &$form_state) {
+  // Add a "Log in using SAML" link to the user-login form.
+  $items = array();
+   $items[] = array(
+     'data' => l(t('Log in using SAML'), 'saml/drupal_login', array('external' => TRUE)), 
+     'class' => array('saml-link'),
+   );
+
+  $form['saml_sp_drupal_login_links'] = array(
+    '#theme' => 'item_list', 
+    '#items' => $items, 
+    '#attributes' => array('class' => array('saml_sp_drupal_login-links')), 
+    '#weight' => 1,
+  );
+}
+
+
+/**
+ * Start the SAML authentication process.
+ */
+function saml_sp_drupal_login__start() {
+  // Load the IDP to authenticate against.
+  $idp = saml_sp_drupal_login__get_idp();
+
+  // Start the authentication process; invoke
+  // saml_sp_drupal_login__saml_authenticate() when done.
+  saml_sp_start($idp, 'saml_sp_drupal_login__saml_authenticate');
+}
+
+/**
+ * Get the IDP configuration to use for Drupal Login via SAML.
+ *
+ * @return Object
+ */
+function saml_sp_drupal_login__get_idp() {
+  $idp_machine_name = variable_get('saml_sp_drupal_login__idp', '');
+  return saml_sp_idp_load($idp_machine_name);
+}
+
+/**
+ * SAML authentication callback.
+ */
+function saml_sp_drupal_login__saml_authenticate($is_valid, OneLogin_Saml_Response $samlResponse) {
+  if ($is_valid) {
+    $email = $samlResponse->getNameId();
+    drupal_set_message('logging in as ' . $email);
+  }
+  drupal_goto();
+}
