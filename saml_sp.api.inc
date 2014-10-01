@@ -30,7 +30,9 @@ function hook_saml_sp_default_idps() {
   $saml_idp->machine_name = 'foo';
   $saml_idp->name = 'Foo IDP';
   $saml_idp->app_name = '';
+  $saml_idp->nameid_field = 'mail';
   $saml_idp->login_url = 'http://example.com/saml/login';
+  $saml_idp->logout_url = 'http://example.com/saml/logout';
   $saml_idp->x509_cert = '-----BEGIN CERTIFICATE-----
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

@@ -19,30 +19,34 @@ function saml_sp__endpoint() {
   // of a request, in OneLogin_Saml_Response::isValid(), via XMLSecurityDSig.
   // Extract the incoming ID (the `inresponseto` parameter of the
   // `<samlp:response` XML node).
+
   if ($inbound_id = _saml_sp__extract_inbound_id($_POST['SAMLResponse'])) {
     if ($request = saml_sp__get_tracked_request($inbound_id)) {
       $idp = saml_sp_idp_load($request['idp']);
       $settings = saml_sp__get_settings($idp);
-      $samlResponse = new OneLogin_Saml_Response($settings, $_POST['SAMLResponse']);
+      // Creating Saml2 Settings object from array
+      $saml_settings = new OneLogin_Saml2_Settings($settings);
+      $saml_response = new OneLogin_Saml2_Response($saml_settings, $_POST['SAMLResponse']);
 
       // Remove the now-expired tracked request.
       cache_clear_all($inbound_id, 'saml_sp_request_tracking_cache');
 
       // Try to check the validity of the samlResponse.
       try {
-        // $samlResponse->isValid() will throw various exceptions to communicate
+        // $saml_response->isValid() will throw various exceptions to communicate
         // any errors. Sadly, these are all of type Exception - no subclassing.
-        $is_valid = $samlResponse->isValid();
+        $is_valid = $saml_response->isValid();
       }
       catch (Exception $e) {
         // @TODO: inspect the Exceptions, and log a meaningful error condition.
+        watchdog('saml_sp', 'Invalid response, %exception', array('%exception' => $e));
         $is_valid = FALSE;
       }
 
       // Invoke the callback function.
       $callback = $request['callback'];
-      $result = $callback($is_valid, $samlResponse);
-    
+      $result = $callback($is_valid, $saml_response);
+
       // The callback *should* redirect the user to a valid page.
       // Provide a fail-safe just in case it doesn't.
       if (empty($result)) {
@@ -54,6 +58,7 @@ function saml_sp__endpoint() {
     }
   }
   // Failover: redirect to the homepage.
+  watchdog('saml_sp', 'Failover: redirect to the homepage. No inbound ID or something.');
   drupal_goto();
 }
 
@@ -64,4 +69,32 @@ function saml_sp__endpoint() {
  */
 function saml_sp__is_valid_authentication_response() {
   return ($_SERVER['REQUEST_METHOD'] == 'POST' && !empty($_POST['SAMLResponse']));
+}
+
+/**
+ * Page callback to initiate the SAML SLO process.
+ *
+ */
+function saml_sp__logout() {
+  // Load the IDP to authenticate against.
+  $idp = saml_sp_drupal_login__get_idp();
+
+  // Settings is a OneLogin_Saml2_Settings object.
+  $settings = saml_sp__get_settings($idp);
+
+  $auth = new OneLogin_Saml2_Auth($settings);
+  // Handle SAML Request / Response and process Single LogOut
+  $auth->processSLO();
+
+  $errors = $auth->getErrors();
+  if (empty($errors)) {
+    watchdog('saml_sp', 'Handled SLO Request/Response from SSO.');
+  }
+  else {
+    watchdog('saml_sp', 'Errors in SLO process: %errors', array('%errors' => implode(', ', $errors)));
+  }
+  // Redirect user to path defined in RelayState after logout, or to front page
+  // if it's empty
+  drupal_set_message(t('You have successfully logged out from all SSO services.'));
+  drupal_goto($_GET['RelayState']);
 }

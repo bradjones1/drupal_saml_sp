@@ -73,19 +73,29 @@ function saml_sp_schema() {
         'not null' => TRUE,
         'default' => ''
       ),
+      'nameid_field' => array(
+        'description' => 'Name of the fields where NameID is stored',
+        'type' => 'varchar',
+        'length' => 30,
+        'not null' => TRUE,
+        'default' => ''
+      ),
       'login_url' => array(
         'description' => 'Full url to connect to the SAML login endpoint',
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
       ),
+      'logout_url' => array(
+        'description' => 'Full url to connect to the SAML logout endpoint',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
       'x509_cert' => array(
         'description' => 'The x.509 public certificate of the IDP',
-        'type' => 'varchar',
-        // 1024 chars should be enough for any x.509 certs.
-        'length' => 1024,
+        'type' => 'text',
         'not null' => TRUE,
-        'default' => ''
       ),
     ),
     'primary key' => array('machine_name'),
@@ -94,10 +104,38 @@ function saml_sp_schema() {
   return $schema;
 }
 
+/**
+ * Implements hook_uninstall().
+ *
+ * Cleans up variable.
+ */
+function saml_sp_uninstall() {
+  variable_del('saml_sp_drupal_login__idp');
+}
 
 // /**
 //  * Implements hook_requirements().
 //  */
 // function samp_sp_requirements($phase) {
-// 
+//
 // }
+
+/**
+ * Add field for NameID field to database
+ */
+function saml_sp_update_7000(&$sandbox) {
+  db_add_field('saml_sp_idps', 'nameid_field', array(
+    'description' => 'Name of the fields where NameID is stored.',
+    'type' => 'varchar',
+    'length' => 30,
+    'not null' => TRUE,
+    'default' => '',
+    ));
+}
+
+/**
+ * Change x509 certificate column type from varchar to text
+ */
+function saml_sp_update_7001(&$sandbox) {
+  db_change_field('saml_sp_idps', 'x509_cert', 'x509_cert', array('type' => 'text', 'not null' => TRUE));
+}

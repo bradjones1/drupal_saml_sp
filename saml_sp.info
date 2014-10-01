@@ -4,3 +4,5 @@ core = 7.x
 configure = admin/config/people/saml
 php = 5.3
 package = SAML
+
+dependencies[] = ctools

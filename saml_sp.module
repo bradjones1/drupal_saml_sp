@@ -11,9 +11,6 @@
  * Uses the OneLogin PHP-SAML toolkit: https://github.com/onelogin/php-saml
  */
 
-// Path to this directory. Requires PHP 5.3 or greater.
-define('DRUPAL_SAML_SP__HOME', __DIR__);
-
 // Default name to identify this application to IDPs.
 define('DRUPAL_SAML_SP__APP_NAME_DEFAULT', 'drupal-saml-sp');
 
@@ -38,7 +35,7 @@ function saml_sp_theme() {
 function saml_sp_permission() {
   return array(
     'configure saml sp' => array(
-      'title' => t('Configure SAML SP'), 
+      'title' => t('Configure SAML SP'),
       'description' => t('Configure the SAML Service Provider integration.'),
       'restrict access' => TRUE,
     ),
@@ -122,6 +119,14 @@ function saml_sp_menu() {
     'file' => 'saml_sp.pages.inc',
     'type' => MENU_CALLBACK,
   );
+
+  $items['saml/logout'] = array(
+    'page callback' => 'saml_sp__logout',
+    // This endpoint should not be under access control.
+    'access callback' => TRUE,
+    'file' => 'saml_sp.pages.inc',
+    'type' => MENU_CALLBACK,
+  );
   return $items;
 }
 
@@ -159,6 +164,7 @@ function saml_sp_idp_load($idp_machine_name) {
  * - name
  * - machine_name
  * - app_name
+ * - nameid_field
  * - login_url
  * - x509_cert
  *
@@ -228,30 +234,31 @@ function saml_sp__get_settings($idp) {
   // Require all the relevant libraries.
   _saml_sp__prepare();
 
-
+  //$settings = new OneLogin_Saml_Settings();
+  $settings = array();
   // The consumer endpoint will always be /saml/consume.
   $endpoint_url = url("saml/consume", array('absolute' => TRUE));
 
+  // URL to login of the IDP server.
+  $settings['idp']['singleSignOnService']['url'] = $idp->login_url;
 
-
-  $settings = new OneLogin_Saml_Settings();
-
-  // URL of the IDP server.
-  $settings->idpSingleSignOnUrl = $idp->login_url;
+  // URL to logout of the IDP server.
+  $settings['idp']['singleLogoutService']['url'] = $idp->logout_url;
 
   // The IDP's public x.509 certificate.
-  $settings->idpPublicCertificate = $idp->x509_cert;
+  $settings['idp']['x509cert'] = $idp->x509_cert;
+
+  // Name to identify IdP
+  $settings['idp']['entityId'] = $idp->machine_name;
 
   // Name to identify this application
-  $settings->spIssuer = $idp->app_name;
-
+  $settings['sp']['entityId'] = $idp->app_name;
 
   // Drupal URL to consume the response from the IDP.
-  $settings->spReturnUrl = $endpoint_url;
+  $settings['sp']['assertionConsumerService']['url'] = $endpoint_url;
 
   // Tells the IdP to return the email address of the current user
-  $settings->requestedNameIdFormat = OneLogin_Saml_Settings::NAMEID_EMAIL_ADDRESS;
-
+  $settings['sp']['NameIDFormat'] = OneLogin_Saml2_Constants::NAMEID_EMAIL_ADDRESS;
 
   // Invoke hook_saml_sp_settings_alter().
   drupal_alter('saml_sp_settings', $settings);
@@ -273,18 +280,41 @@ function saml_sp__get_settings($idp) {
  * A function to call with the results of the SAML authentication process.
  */
 function saml_sp_start($idp, $callback) {
-  // Settings is a OneLogin_Saml_Settings object.
+  global $language;
+  global $base_url;
+  // Settings is an array for creating a Saml2 Settings object.
   $settings = saml_sp__get_settings($idp);
+  // Creating Saml2 Settings object
+  $saml_settings = new OneLogin_Saml2_Settings($settings);
+  $auth_request = new OneLogin_Saml2_AuthnRequest($saml_settings);
+  $saml_request = $auth_request->getRequest();
 
+  $parameters = array('SAMLRequest' => $saml_request);
 
-  $authRequest = new OneLogin_Saml_AuthRequest($settings);
-  $url = $authRequest->getRedirectUrl();
+  // Return the user to a sensible path
+  if (isset($_GET['returnTo'])) {
+    // If a returnTo parameter is present, then use that
+    $parameters['RelayState'] = $_GET['returnTo'];
+  }
+  else {
+    // By default user is returned to the front page in the same language
+    $parameters['RelayState'] = $base_url . '/' . $language->prefix;
+  }
+  $idp_data = $saml_settings->getIdPData();
+  $sso_url = $idp_data['singleSignOnService']['url'];
+  $url = OneLogin_Saml2_Utils::redirect($sso_url, $parameters, TRUE);
 
   // Track the ID of the outbound request.
-  $prefix_length = strlen($settings->idpSingleSignOnUrl . "?SAMLRequest=");
+  $prefix_length = strlen($idp->login_url . "?SAMLRequest=");
   $id = _saml_sp__extract_outbound_id(substr($url, $prefix_length));
+  watchdog('saml_sp', 'Extracted outbound ID for SAML login: %id', array('%id' => $id));
   saml_sp__track_request($id, $idp, $callback);
 
+  // Passing current language as parameter, so that IdP can display UI
+  // in correct language. IdP might not use the value or use a different
+  // parameter.
+  // TODO: Maybe the parameter name should be configurable?
+  $url = $url . '&language=' . $language->language;
   // Redirect the user to the IDP.
   header("Location: $url");
 }
@@ -309,7 +339,6 @@ function saml_sp__track_request($id, $idp, $callback) {
   $expire = REQUEST_TIME + SAML_SP_REQUEST_CACHE_TIMEOUT;
   cache_set($id, $data, 'saml_sp_request_tracking_cache', $expire);
 }
-
 
 /**
  * Get the IDP and callback from a tracked request.
@@ -346,6 +375,7 @@ function _saml_sp__default_idp() {
     // If the app-name is NULL, the global app-name will be used instead.
     'app_name' => NULL,
     'login_url' => '',
+    'logout_url' => '',
     'x509_cert' => '',
   );
 }
@@ -354,13 +384,19 @@ function _saml_sp__default_idp() {
  * Load the required OneLogin SAML-PHP toolkit files.
  */
 function _saml_sp__prepare() {
+  $libpath = libraries_get_path('php-saml');
   static $has_run = FALSE;
   if (!$has_run) {
-    require_once DRUPAL_SAML_SP__HOME . '/lib/ext/xmlseclibs/xmlseclibs.php';
-    require_once DRUPAL_SAML_SP__HOME . '/lib/src/OneLogin/Saml/AuthRequest.php';
-    require_once DRUPAL_SAML_SP__HOME . '/lib/src/OneLogin/Saml/Response.php';
-    require_once DRUPAL_SAML_SP__HOME . '/lib/src/OneLogin/Saml/Settings.php';
-    require_once DRUPAL_SAML_SP__HOME . '/lib/src/OneLogin/Saml/XmlSec.php';
+    require_once $libpath . '/extlib/xmlseclibs/xmlseclibs.php';
+    require_once $libpath . '/lib/Saml2/Auth.php';
+    require_once $libpath . '/lib/Saml2/AuthnRequest.php';
+    require_once $libpath . '/lib/Saml2/Constants.php';
+    require_once $libpath . '/lib/Saml2/Error.php';
+    require_once $libpath . '/lib/Saml2/LogoutRequest.php';
+    require_once $libpath . '/lib/Saml2/LogoutResponse.php';
+    require_once $libpath . '/lib/Saml2/Response.php';
+    require_once $libpath . '/lib/Saml2/Settings.php';
+    require_once $libpath . '/lib/Saml2/Utils.php';
 
     $has_run = TRUE;
   }
@@ -380,15 +416,16 @@ function _saml_sp__prepare() {
 function _saml_sp__extract_outbound_id($encoded_url) {
   $string = $encoded_url;
   $string = @urldecode($string);
+  $string = @substr($string, 0, strpos($string, '&'));
   $string = @base64_decode($string);
   $string = @gzinflate($string);
 
-  // This regex is based on the prelude provided in
-  // OneLogin_Saml_AuthRequest::getRedirectUrl().
+  // This regex is based on the constructor code  provided in
+  // OneLogin_Saml2_AuthnRequest.
   $regex = '/^<samlp:AuthnRequest
     xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
     xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
-    ID="(' . OneLogin_Saml_AuthRequest::ID_PREFIX . '[0-9a-f]{40})"/m';
+    ID="(ONELOGIN_[0-9a-f]{40})"/m';
 
   $result = FALSE;
   if (preg_match($regex, $string, $matches)) {
@@ -417,11 +454,86 @@ function _saml_sp__extract_inbound_id($assertion) {
   if ($document->loadXML($xml)) {
     try {
       $id = @$document->firstChild->attributes->getNamedItem('InResponseTo')->value;
+      watchdog('saml_sp', 'SAML login attempt with inbound ID: %id', array('%id' => $id));
       return $id;
     }
     catch (Exception $e) {
+      watchdog('saml_sp', 'Could not extract inbound ID. %exception', array('%exception' => $e));
       return FALSE;
     }
   }
   return FALSE;
+}
+
+/**
+* Implements hook_user_login
+*/
+function saml_sp_user_login(&$edit, $account) {
+  // Redirecting user to desired path
+  drupal_goto($edit['redirect']);
+}
+
+/**
+* Implements hook_user_logout
+*/
+function saml_sp_user_logout($account) {
+  global $language;
+  global $base_url;
+
+  // Load the IDP to authenticate against.
+  $idp = saml_sp_drupal_login__get_idp();
+  // Settings is an array
+  $settings = saml_sp__get_settings($idp);
+  // Creating Saml2 Settings object from array
+  $saml_settings = new OneLogin_Saml2_Settings($settings);
+  $idp_data = $saml_settings->getIdPData();
+
+  // Checking if logout url is configured
+  if (isset($idp_data['singleLogoutService']) && isset($idp_data['singleLogoutService']['url'])) {
+      $slo_url = $idp_data['singleLogoutService']['url'];
+  }
+  else {
+      throw new Exception("The IdP does not support Single Log Out");
+  }
+
+  // Creating a logout request to be passed to IdP
+  if (isset($_SESSION['IdPSessionIndex']) && !empty($_SESSION['IdPSessionIndex'])) {
+      $logout_request = new OneLogin_Saml2_LogoutRequest($saml_settings, NULL, $_SESSION['IdPSessionIndex']);
+  }
+  else {
+      $logout_request = new OneLogin_Saml2_LogoutRequest($saml_settings);
+  }
+
+  $saml_request = $logout_request->getRequest();
+  $parameters = array('SAMLRequest' => $saml_request);
+  // Checking current language, so that user can be redirected to front page
+  // in same language
+  $parameters['RelayState'] = $base_url . '/' . $language->prefix;
+  $url = OneLogin_Saml2_Utils::redirect($slo_url, $parameters, TRUE);
+  watchdog('saml_sp', 'Session closed for %name (%uid) and starting SAML SLO.', array('%name' => $account->name, '%uid' => $account->uid));
+  // Force redirection in drupal_goto().
+  unset($_GET['destination']);
+  if(!empty($saml_request)) {
+    drupal_goto($url);
+  }
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function saml_sp_form_alter(&$form, &$form_state, $form_id) {
+   switch ($form_id) {
+    case 'user_profile_form' :
+      // Disable email field because it should not be changed when using SSO.
+      // Users who have access to configure the module can do it.
+      if (!user_access('configure saml sp')) {
+        $form['account']['mail']['#disabled'] = TRUE;
+      }
+      $form['account']['mail']['#description'] = t('Email address cannot be changed here, because the information comes from the SSO server. You need to change it there instead. After it has been changed, you need to logout and login to this service to see the updated address.');
+      // Disable all password fields because they need to be changed on the IdP
+      // server
+      $validate_unset = array_search('user_validate_current_pass', $form['#validate']);
+      unset($form['#validate'][$validate_unset], $form['account']['pass'], $form['account']['current_pass']);
+    break;
+   }
 }

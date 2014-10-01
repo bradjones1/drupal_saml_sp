@@ -34,37 +34,36 @@ function saml_sp__configure_idp_form($form, &$form_state, $saml_idp = NULL) {
   '#type' => 'value',
   '#value' => isset($saml_idp->export_type) ? $saml_idp->export_type : NULL,
  );
- 
+
  // If this is an update to an existing IDP, track the original machine name,
  // in case it is changed.
  if (!empty($saml_idp->machine_name)) {
    $form['orig_machine_name'] = array(
      '#type' => 'value',
-     '#value' => $saml_idp->machine_name, 
+     '#value' => $saml_idp->machine_name,
    );
  }
 
   $form['name'] = array(
-    '#type' => 'textfield', 
-    '#title' => t('Name'), 
-    '#default_value' => $saml_idp->name, 
-    '#description' => t('The human-readable name of this IDP. This text will be displayed to administrators who can configure SAML.'), 
-    '#required' => TRUE, 
+    '#type' => 'textfield',
+    '#title' => t('Name'),
+    '#default_value' => $saml_idp->name,
+    '#description' => t('The human-readable name of this IDP. This text will be displayed to administrators who can configure SAML.'),
+    '#required' => TRUE,
     '#size' => 30,
     '#maxlength' => 30,
   );
 
   $form['machine_name'] = array(
-    '#type' => 'machine_name', 
-    '#default_value' => $saml_idp->machine_name, 
+    '#type' => 'machine_name',
+    '#default_value' => $saml_idp->machine_name,
     '#maxlength' => 32,
     '#machine_name' => array(
       'exists' => 'saml_sp_idp_load',
       // 'source' => array('machine_name'),
-    ), 
+    ),
     '#description' => t('A unique machine-readable name for this IDP. It must only contain lowercase letters, numbers, and underscores.'),
   );
-
 
   $form['app_name'] = array(
     '#type' => 'textfield',
@@ -72,6 +71,21 @@ function saml_sp__configure_idp_form($form, &$form_state, $saml_idp = NULL) {
     '#description' => t('The app name is provided to the Identiy Provider, to identify the origin of the request.'),
     '#default_value' => $saml_idp->app_name,
     '#maxlength' => 30,
+  );
+
+  // Adding mail and extra fields to select list
+  $fields = array('mail' => t('Email'));
+  $extra_fields = field_info_instances($entity_type = 'user', $bundle_name = NULL);
+  $extra_fields = array_keys($extra_fields['user']);
+  foreach ($extra_fields as $value) {
+    $fields[$value] = $value;
+  }
+  $form['nameid_field'] = array(
+    '#type' => 'select',
+    '#title' => t('NameID field'),
+    '#description' => t('Mail is usually used between IdP and SP, but if you want to let users change the email address in IdP, you need to use a custom field to store the ID.'),
+    '#options' => $fields,
+    '#default_value' => $saml_idp->nameid_field,
   );
 
   // The SAML Login URL and x.509 certificate must match the details provided
@@ -85,12 +99,22 @@ function saml_sp__configure_idp_form($form, &$form_state, $saml_idp = NULL) {
   );
   $form['idp']['idp_login_url'] = array(
     '#type' => 'textfield',
-    '#title' => t('IDP URL'),
+    '#title' => t('IDP Login URL'),
     '#description' => t('Login URL of the Identity Provider server.'),
     '#default_value' => $saml_idp->login_url,
     '#required' => TRUE,
     '#max_length' => 255,
   );
+
+  $form['idp']['idp_logout_url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('IDP Logout URL'),
+    '#description' => t('Logout URL of the Identity Provider server.'),
+    '#default_value' => $saml_idp->logout_url,
+    '#required' => TRUE,
+    '#max_length' => 255,
+  );
+
   $form['idp']['idp_x509_cert'] = array(
     '#type' => 'textarea',
     '#title' => t('x.509 Certificate'),
@@ -122,7 +146,9 @@ function saml_sp__configure_idp_form_submit($form, &$form_state) {
     'name'         => $form_state['values']['name'],
     'machine_name' => $form_state['values']['machine_name'],
     'app_name'     => $form_state['values']['app_name'],
+    'nameid_field' => $form_state['values']['nameid_field'],
     'login_url'    => $form_state['values']['idp_login_url'],
+    'logout_url'   => $form_state['values']['idp_logout_url'],
     'x509_cert'    => $form_state['values']['idp_x509_cert'],
     'export_type'  => $form_state['values']['export_type'],
   );
