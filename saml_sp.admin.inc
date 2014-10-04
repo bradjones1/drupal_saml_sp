@@ -128,6 +128,22 @@ function saml_sp__configure_idp_form($form, &$form_state, $saml_idp = NULL) {
     '#type' => 'submit',
     '#value' => t('Save settings'),
   );
+
+  $form['idp']['metadata'] = array(
+    '#type'         => 'fieldset',
+    '#collapsed'    => TRUE,
+    '#collapsible'  => TRUE,
+    '#title'        => t('Metadata'),
+    '#description'  => t('This is the Federation Metadata for this IDp'),
+  );
+  $form['idp']['metadata']['data'] = array(
+    '#type'           => 'textarea',
+    '#title'          => t('XML'),
+    '#description'    => t('This metadata can also be accessed at !link', array('!link' => l(saml_sp__metadata_url($saml_idp), saml_sp__metadata_url($saml_idp)))),
+    '#disabled'       => TRUE,
+    '#rows'           => 20,
+    '#default_value'  => saml_sp__get_metadata($saml_idp),
+  );
   return $form;
 }
 
@@ -239,3 +255,69 @@ function saml_sp__export_idp($saml_idp) {
   return $output;
 }
 
+/**
+ * configure this SAML Service Provider
+ */
+function saml_sp__admin_config() {
+
+  $form = array();
+
+  $form['metadata'] = array(
+    '#type'     => 'fieldset',
+    '#title'    => t('Metadata'),
+  );
+
+  $form['metadata']['saml_sp__sign_metadata'] = array(
+    '#type'   => 'checkbox',
+    '#title'  => t('Sign Metadata'),
+    '#description' => t('Sign the metadata to provide to Identity Providers'),
+    '#default_value' => variable_get('saml_sp__sign_metadata', 0),
+  );
+
+  $form['metadata']['saml_sp__cert_location'] = array(
+    '#type'   => 'textfield',
+    '#title'  => t('Certificate Location'),
+    '#description'  => t('The location of the x.509 certificate file on the server. This must be a location that PHP can read.'),
+    '#states' => array(
+      'visible' => array(
+        ':input[name="saml_sp__sign_metadata"]' => array('checked' => TRUE),
+      ),
+    ),
+    '#default_value' => variable_get('saml_sp__cert_location', ''),
+  );
+
+  $form['metadata']['saml_sp__key_location'] = array(
+    '#type'   => 'textfield',
+    '#title'  => t('Key Location'),
+    '#description'  => t('The location of the x.509 key file on the server. This must be a location that PHP can read.'),
+    '#states' => array(
+      'visible' => array(
+        ':input[name="saml_sp__sign_metadata"]' => array('checked' => TRUE),
+      ),
+    ),
+    '#default_value' => variable_get('saml_sp__key_location', ''),
+  );
+
+  return system_settings_form($form);
+}
+
+function saml_sp__admin_config_validate(&$form, &$form_state) {
+  // check the saml_sp__sign_metadata status
+  if ($form_state['values']['saml_sp__sign_metadata']) {
+    // certificate file
+    if (empty($form_state['values']['saml_sp__cert_location'])) {
+      form_set_error('saml_sp__cert_location', 'The Certificate Location must be provided.');
+    }
+    if (!is_file($form_state['values']['saml_sp__cert_location'])) {
+      form_set_error('saml_sp__cert_location', 'The Certificate file does not exist.');
+    }
+    // key file
+    if (empty($form_state['values']['saml_sp__key_location'])) {
+      form_set_error('saml_sp__cert_location', 'The Certificate Location must be provided.');
+    }
+    if (!is_file($form_state['values']['saml_sp__key_location'])) {
+      form_set_error('saml_sp__cert_location', 'The Certificate file does not exist.');
+    }
+  }
+
+}

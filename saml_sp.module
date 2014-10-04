@@ -10,6 +10,7 @@
  *
  * Uses the OneLogin PHP-SAML toolkit: https://github.com/onelogin/php-saml
  */
+define('PHP_SAML_LIBRARY_MIN_VERSION', '2.0.0');
 
 // Default name to identify this application to IDPs.
 define('DRUPAL_SAML_SP__APP_NAME_DEFAULT', 'drupal-saml-sp');
@@ -50,6 +51,7 @@ function saml_sp_menu() {
 
   $items['admin/config/people/saml_sp'] = array(
     'title' => 'SAML Service Providers',
+    'description' => 'Configure your SAML Service',
     'page callback' => 'saml_sp__admin_overview',
     'access arguments' => array('configure saml sp'),
     'file' => 'saml_sp.admin.inc',
@@ -57,7 +59,18 @@ function saml_sp_menu() {
   $items['admin/config/people/saml_sp/IDP'] = array(
     'title' => 'Identiy Providers',
     'type' => MENU_DEFAULT_LOCAL_TASK,
+    'access arguments' => array('configure saml sp'),
     'weight' => -10,
+  );
+
+  $items['admin/config/people/saml_sp/setup'] = array(
+    'title' => 'Configure SP',
+    'description' => 'Configure this Service provider',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('saml_sp__admin_config'),
+    'type' => MENU_LOCAL_TASK,
+    'access arguments' => array('configure saml sp'),
+    'file' => 'saml_sp.admin.inc',
   );
 
   // Add a new IDP.
@@ -69,6 +82,7 @@ function saml_sp_menu() {
     'file' => 'saml_sp.admin.inc',
     'type' => MENU_LOCAL_ACTION,
   );
+
   // Configure an existing IDP.
   $items['admin/config/people/saml_sp/IDP/%saml_sp_idp'] = array(
     'title' => 'SAML IDP: @idp_name',
@@ -98,6 +112,12 @@ function saml_sp_menu() {
     'page arguments' => array(5),
     'access arguments' => array('configure saml sp'),
     'file' => 'saml_sp.admin.inc',
+  );
+  // metadata specific to an IDP
+  $items['saml/%saml_sp_idp/metadata.xml'] = array(
+    'page callback' => 'saml_sp__get_metadata',
+    'page arguments' => array(1, TRUE),
+    'access callback' => TRUE,
   );
 
 
@@ -135,6 +155,13 @@ function saml_sp_menu() {
  */
 function saml_sp__menu_title($title, $idp) {
   return t($title, array('@idp_name' => $idp->name));
+}
+
+/**
+ * generate a url for the idp metadata
+ */
+function saml_sp__metadata_url($idp) {
+  return url('saml/' . $idp->machine_name . '/metadata.xml', array('absolute' => TRUE));
 }
 
 
@@ -219,7 +246,69 @@ function saml_sp__load_all_idps() {
 /******************************************************************************
  * API library integration.
  *****************************************************************************/
+/**
+ * Implements hook_libraries_info().
+ */
+function saml_sp_libraries_info() {
 
+  // $lib_file = variable_get('usfedgov_google_analytics_js_selection');
+  $libraries['php-saml'] = array(
+    'name' => 'Simple SAML toolkit for PHP',
+    'vendor url' => 'https://github.com/onelogin/php-saml',
+    'download url' => 'https://github.com/onelogin/php-saml/archive/master.zip',
+    'version arguments' => array(
+      'file'    => 'CHANGELOG',
+      'pattern' => '/v\.([0-9a-zA-Z\.-]+)/',
+    ),
+    'files' => array(
+      'php' => array(
+        '_toolkit_loader.php',
+      ),
+    ),
+  );
+
+  return $libraries;
+}
+
+/**
+ * Implements hook_requirements().
+ */
+function saml_sp_requirements($phase) {
+  $requirements = array();
+
+  if ($phase == 'runtime') {
+    $t = get_t();
+    $library = libraries_detect('php-saml');
+    $error_type = isset($library['error']) ? drupal_ucfirst($library['error']) : '';
+    $error_message = isset($library['error message']) ? $library['error message'] : '';
+
+    if (empty($library['installed'])) {
+      $requirements['php_saml_library'] = array(
+        'title' => $t('PHP SAML library'),
+        'value' => $t('@e: At least @a', array('@e' => $error_type, '@a' => PHP_SAML_LIBRARY_MIN_VERSION)),
+        'severity' => REQUIREMENT_ERROR,
+        'description' => $t('!error You need to download the !library, extract the archive and place the colorbox directory in the %path directory on your server.', array('!error' => $error_message, '!library' => l($t('PHP SAML library'), $library['download url']), '%path' => 'sites/all/libraries')),
+      );
+    }
+    elseif (version_compare($library['version'], PHP_SAML_LIBRARY_MIN_VERSION, '>=')) {
+      $requirements['php_saml_library'] = array(
+        'title' => $t('PHP SAML library'),
+        'severity' => REQUIREMENT_OK,
+        'value' => $library['version'],
+      );
+    }
+    else {
+      $requirements['php_saml_library'] = array(
+        'title' => $t('PHP SAML library'),
+        'value' => $t('At least @a', array('@a' => PHP_SAML_LIBRARY_MIN_VERSION)),
+        'severity' => REQUIREMENT_ERROR,
+        'description' => $t('You need to download a later version of the !library and replace the old version located in the %path directory on your server.', array('!library' => l($t('PHP SAML library'), $library['download url']), '%path' => $library['library path'])),
+      );
+    }
+  }
+
+  return $requirements;
+}
 
 /**
  * Get the SAML settings for an IDP.
@@ -238,6 +327,8 @@ function saml_sp__get_settings($idp) {
   $settings = array();
   // The consumer endpoint will always be /saml/consume.
   $endpoint_url = url("saml/consume", array('absolute' => TRUE));
+
+  $settings['idp']['entityId'] = $idp->machine_name;
 
   // URL to login of the IDP server.
   $settings['idp']['singleSignOnService']['url'] = $idp->login_url;
@@ -260,12 +351,46 @@ function saml_sp__get_settings($idp) {
   // Tells the IdP to return the email address of the current user
   $settings['sp']['NameIDFormat'] = OneLogin_Saml2_Constants::NAMEID_EMAIL_ADDRESS;
 
+  $settings['security']['signMetadata'] = (bool) variable_get('saml_sp__sign_metadata', 0);
+
+  if (variable_get('saml_sp__cert_location', '') && file_exists(variable_get('saml_sp__cert_location', ''))) {
+    $settings['sp']['x509cert'] = file_get_contents(variable_get('saml_sp__cert_location', ''));
+  }
+
   // Invoke hook_saml_sp_settings_alter().
   drupal_alter('saml_sp_settings', $settings);
+
+  // we are adding in the private key after the alter function because we don't
+  // want to risk the private key getting out and in the hands of a rogue module
+  if (variable_get('saml_sp__key_location', '') && file_exists(variable_get('saml_sp__key_location', ''))) {
+    $settings['sp']['privateKey'] = file_get_contents(variable_get('saml_sp__key_location', ''));
+  }
 
   return $settings;
 }
 
+
+
+/**
+ * load the settings and get the metadata
+ */
+function saml_sp__get_metadata($idp, $output_page = FALSE) {
+  $settings = saml_sp__get_settings($idp);
+
+  $auth = new OneLogin_Saml2_Auth($settings);
+  $settings = $auth->getSettings();
+  $metadata = $settings->getSPMetadata();
+  $errors = $settings->validateMetadata($metadata);
+  if (empty($errors)) {
+    if ($output_page) {
+      drupal_add_http_header('Content-Type', 'text/xml');
+      print $metadata;
+    }
+    else {
+      return $metadata;
+    }
+  }
+}
 
 /******************************************************************************
  * Start and finish SAML authentication process.
@@ -384,22 +509,7 @@ function _saml_sp__default_idp() {
  * Load the required OneLogin SAML-PHP toolkit files.
  */
 function _saml_sp__prepare() {
-  $libpath = libraries_get_path('php-saml');
-  static $has_run = FALSE;
-  if (!$has_run) {
-    require_once $libpath . '/extlib/xmlseclibs/xmlseclibs.php';
-    require_once $libpath . '/lib/Saml2/Auth.php';
-    require_once $libpath . '/lib/Saml2/AuthnRequest.php';
-    require_once $libpath . '/lib/Saml2/Constants.php';
-    require_once $libpath . '/lib/Saml2/Error.php';
-    require_once $libpath . '/lib/Saml2/LogoutRequest.php';
-    require_once $libpath . '/lib/Saml2/LogoutResponse.php';
-    require_once $libpath . '/lib/Saml2/Response.php';
-    require_once $libpath . '/lib/Saml2/Settings.php';
-    require_once $libpath . '/lib/Saml2/Utils.php';
-
-    $has_run = TRUE;
-  }
+  libraries_load('php-saml');
 }
 
 /**
@@ -480,6 +590,12 @@ function saml_sp_user_logout($account) {
   global $language;
   global $base_url;
 
+
+  if (!function_exists('saml_sp_drupal_login__get_idp')) {
+    // apparently this function cannot be found, it is in a module that depends
+    // on this one, maybe this callback needs to be moved to that module
+    return;
+  }
   // Load the IDP to authenticate against.
   $idp = saml_sp_drupal_login__get_idp();
   // Settings is an array

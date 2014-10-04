@@ -6,3 +6,4 @@ php = 5.3
 package = SAML
 
 dependencies[] = ctools
+dependencies[] = libraries
