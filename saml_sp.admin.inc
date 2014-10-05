@@ -325,44 +325,40 @@ function saml_sp__admin_config() {
     '#default_value'  => $organization['url'],
   );
 
-
-  $form['metadata'] = array(
-    '#type'     => 'fieldset',
-    '#title'    => t('Metadata'),
+  $security = variable_get('saml_sp__security', array());
+  $form['saml_sp__security'] = array(
+    '#type'           => 'fieldset',
+    '#title'          => 'security',
+    '#tree'           => TRUE,
   );
-
-  $form['metadata']['saml_sp__sign_metadata'] = array(
-    '#type'   => 'checkbox',
-    '#title'  => t('Sign Metadata'),
-    '#description' => t('Sign the metadata to provide to Identity Providers'),
-    '#default_value' => variable_get('saml_sp__sign_metadata', 0),
+  $form['saml_sp__security']['authnRequestsSigned'] = array(
+    '#type'           => 'checkbox',
+    '#title'          => t('Authn Requests Signed'),
+    '#default_value'  => $security['authnRequestsSigned'],
   );
-
-  $form['metadata']['saml_sp__cert_location'] = array(
+  $form['saml_sp__security']['wantAssertionsSigned'] = array(
+    '#type'           => 'checkbox',
+    '#title'          => t('Want Assertions Signed'),
+    '#default_value'  => $security['wantAssertionsSigned'],
+  );
+  $form['saml_sp__security']['signMetaData'] = array(
+    '#type'           => 'checkbox',
+    '#title'          => t('Sign Meta Data'),
+    '#default_value'  => $security['signMetaData'],
+  );
+  $form['saml_sp__security']['saml_sp__cert_location'] = array(
     '#type'   => 'textfield',
     '#title'  => t('Certificate Location'),
     '#description'  => t('The location of the x.509 certificate file on the server. This must be a location that PHP can read.'),
-    '#states' => array(
-      'visible' => array(
-        ':input[name="saml_sp__sign_metadata"]' => array('checked' => TRUE),
-      ),
-    ),
-    '#default_value' => variable_get('saml_sp__cert_location', ''),
+    '#default_value' => $security['saml_sp__cert_location'],
   );
 
-  $form['metadata']['saml_sp__key_location'] = array(
+  $form['saml_sp__security']['saml_sp__key_location'] = array(
     '#type'   => 'textfield',
     '#title'  => t('Key Location'),
     '#description'  => t('The location of the x.509 key file on the server. This must be a location that PHP can read.'),
-    '#states' => array(
-      'visible' => array(
-        ':input[name="saml_sp__sign_metadata"]' => array('checked' => TRUE),
-      ),
-    ),
-    '#default_value' => variable_get('saml_sp__key_location', ''),
+    '#default_value' => $security['saml_sp__key_location'],
   );
-
-
 
   return system_settings_form($form);
 }
