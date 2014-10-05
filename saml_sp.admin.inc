@@ -262,6 +262,70 @@ function saml_sp__admin_config() {
 
   $form = array();
 
+  $contact = variable_get('saml_sp__contact', array());
+
+  $form['saml_sp__contact'] = array(
+    '#type'         => 'fieldset',
+    '#title'        => t('Contact Information'),
+    '#description'  => t('Information to be included in the federation metadata.'),
+    '#tree'         => TRUE,
+  );
+  $form['saml_sp__contact']['technical'] = array(
+    '#type'         => 'fieldset',
+    '#title'        => t('Technical'),
+  );
+  $form['saml_sp__contact']['technical']['name'] = array(
+    '#type'           => 'textfield',
+    '#title'          => t('Name'),
+    '#default_value'  => $contact['technical']['name'],
+  );
+  $form['saml_sp__contact']['technical']['email'] = array(
+    '#type'           => 'textfield',
+    '#title'          => t('Email'),
+    '#default_value'  => $contact['technical']['email'],
+  );
+  $form['saml_sp__contact']['support'] = array(
+    '#type'         => 'fieldset',
+    '#title'        => t('Support'),
+  );
+  $form['saml_sp__contact']['support']['name'] = array(
+    '#type'           => 'textfield',
+    '#title'          => t('Name'),
+    '#default_value'  => $contact['support']['name'],
+  );
+  $form['saml_sp__contact']['support']['email'] = array(
+    '#type'           => 'textfield',
+    '#title'          => t('Email'),
+    '#default_value'  => $contact['support']['email'],
+  );
+
+  $organization = variable_get('saml_sp__organization', array());
+  $form['saml_sp__organization'] = array(
+    '#type'           => 'fieldset',
+    '#title'          => t('Organization'),
+    '#description'    => t('Oraganization information for the federation metadata'),
+    '#tree'           => TRUE,
+  );
+  $form['saml_sp__organization']['name'] = array(
+    '#type'           => 'textfield',
+    '#title'          => t('Name'),
+    '#description'    => t('This is a short name for the organization'),
+    '#default_value'  => $organization['name'],
+  );
+  $form['saml_sp__organization']['display_name'] = array(
+    '#type'           => 'textfield',
+    '#title'          => t('Display Name'),
+    '#description'    => t('This is a long name for the organization'),
+    '#default_value'  => $organization['display_name'],
+  );
+  $form['saml_sp__organization']['url'] = array(
+    '#type'           => 'textfield',
+    '#title'          => t('URL'),
+    '#description'    => t('This is a URL for the prganization'),
+    '#default_value'  => $organization['url'],
+  );
+
+
   $form['metadata'] = array(
     '#type'     => 'fieldset',
     '#title'    => t('Metadata'),
@@ -297,6 +361,8 @@ function saml_sp__admin_config() {
     ),
     '#default_value' => variable_get('saml_sp__key_location', ''),
   );
+
+
 
   return system_settings_form($form);
 }

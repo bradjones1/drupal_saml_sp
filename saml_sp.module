@@ -10,6 +10,8 @@
  *
  * Uses the OneLogin PHP-SAML toolkit: https://github.com/onelogin/php-saml
  */
+
+// require PHP SAML 2.0 or greater
 define('PHP_SAML_LIBRARY_MIN_VERSION', '2.0.0');
 
 // Default name to identify this application to IDPs.
@@ -351,6 +353,30 @@ function saml_sp__get_settings($idp) {
   // Tells the IdP to return the email address of the current user
   $settings['sp']['NameIDFormat'] = OneLogin_Saml2_Constants::NAMEID_EMAIL_ADDRESS;
 
+  // add the contact information for the SP
+  $contact = variable_get('saml_sp__contact', array());
+  $settings['contactPerson'] = array (
+    'technical' => array (
+        'givenName' => $contact['technical']['name'],
+        'emailAddress' => $contact['technical']['email'],
+    ),
+    'support' => array (
+        'givenName' => $contact['support']['name'],
+        'emailAddress' => $contact['support']['email'],
+    ),
+  );
+
+  // add the organization information
+  $organization = variable_get('saml_sp__organization', array());
+  $settings['organization'] = array (
+    'en-US' => array(
+      'name' => $organization['name'],
+      'displayname' => $organization['display_name'],
+      'url' => $organization['url'],
+    ),
+  );
+
+  // should the metadata be signed?
   $settings['security']['signMetadata'] = (bool) variable_get('saml_sp__sign_metadata', 0);
 
   if (variable_get('saml_sp__cert_location', '') && file_exists(variable_get('saml_sp__cert_location', ''))) {
@@ -365,7 +391,7 @@ function saml_sp__get_settings($idp) {
   if (variable_get('saml_sp__key_location', '') && file_exists(variable_get('saml_sp__key_location', ''))) {
     $settings['sp']['privateKey'] = file_get_contents(variable_get('saml_sp__key_location', ''));
   }
-
+tdpm($settings, '$settings');
   return $settings;
 }
 
