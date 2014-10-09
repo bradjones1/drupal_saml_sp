@@ -24,7 +24,9 @@ function saml_sp__admin_overview() {
  * @ingroup forms
  */
 function saml_sp__configure_idp_form($form, &$form_state, $saml_idp = NULL) {
+  $show_metadata = TRUE;
   if (is_null($saml_idp)) {
+    $show_metadata = FALSE;
     // Populate a default IDP object, with empty fields.
     $saml_idp = _saml_sp__default_idp();
   }
@@ -128,22 +130,32 @@ function saml_sp__configure_idp_form($form, &$form_state, $saml_idp = NULL) {
     '#type' => 'submit',
     '#value' => t('Save settings'),
   );
+  try {
+    $metadata = saml_sp__get_metadata($saml_idp);
+  }
+  catch (Exception $e) {
+    drupal_set_message(t('Attempt to create metadata failed: %message.', array('%message' => $e->getMessage())), 'error');
+    $metadata = '';
+  }
 
-  $form['idp']['metadata'] = array(
-    '#type'         => 'fieldset',
-    '#collapsed'    => TRUE,
-    '#collapsible'  => TRUE,
-    '#title'        => t('Metadata'),
-    '#description'  => t('This is the Federation Metadata for this IDp'),
-  );
-  $form['idp']['metadata']['data'] = array(
-    '#type'           => 'textarea',
-    '#title'          => t('XML'),
-    '#description'    => t('This metadata can also be accessed at !link', array('!link' => l(saml_sp__metadata_url($saml_idp), saml_sp__metadata_url($saml_idp)))),
-    '#disabled'       => TRUE,
-    '#rows'           => 20,
-    '#default_value'  => saml_sp__get_metadata($saml_idp),
-  );
+  if ($show_metadata) {
+    $form['idp']['metadata'] = array(
+      '#type'         => 'fieldset',
+      '#collapsed'    => TRUE,
+      '#collapsible'  => TRUE,
+      '#title'        => t('Metadata'),
+      '#description'  => t('This is the Federation Metadata for this IDp'),
+    );
+    $form['idp']['metadata']['data'] = array(
+      '#type'           => 'textarea',
+      '#title'          => t('XML'),
+      '#description'    => t('This metadata can also be accessed at !link', array('!link' => l(saml_sp__metadata_url($saml_idp), saml_sp__metadata_url($saml_idp)))),
+      '#disabled'       => TRUE,
+      '#rows'           => 20,
+      '#default_value'  => $metadata,
+    );
+  }
+
   return $form;
 }
 
