@@ -13,6 +13,7 @@
 
 // require PHP SAML 2.0 or greater
 define('PHP_SAML_LIBRARY_MIN_VERSION', '2.0.0');
+define('XMLSECLIBS_MIN_VERSION', '1.0');
 
 // Default name to identify this application to IDPs.
 define('DRUPAL_SAML_SP__APP_NAME_DEFAULT', 'drupal-saml-sp');
@@ -253,7 +254,6 @@ function saml_sp__load_all_idps() {
  */
 function saml_sp_libraries_info() {
 
-  // $lib_file = variable_get('usfedgov_google_analytics_js_selection');
   $libraries['php-saml'] = array(
     'name' => 'Simple SAML toolkit for PHP',
     'vendor url' => 'https://github.com/onelogin/php-saml',
@@ -264,7 +264,35 @@ function saml_sp_libraries_info() {
     ),
     'files' => array(
       'php' => array(
-        '_toolkit_loader.php',
+        'lib/Saml2/Auth.php',
+        'lib/Saml2/AuthnRequest.php',
+        'lib/Saml2/Constants.php',
+        'lib/Saml2/Error.php',
+        'lib/Saml2/LogoutRequest.php',
+        'lib/Saml2/LogoutResponse.php',
+        'lib/Saml2/Metadata.php',
+        'lib/Saml2/Response.php',
+        'lib/Saml2/Settings.php',
+        'lib/Saml2/Utils.php',
+      ),
+    ),
+    'dependencies' => array(
+      'xmlseclibs',
+    ),
+  );
+
+  $libraries['xmlseclibs'] = array(
+    'name' => 'XML Encryption and Signatures',
+    'vendor url' => 'https://code.google.com/p/xmlseclibs/',
+    'download url' => 'https://xmlseclibs.googlecode.com/files/xmlseclibs-1.3.1.tar.gz',
+    'version arguments' => array(
+      'file'    => 'xmlseclibs.php',
+      'pattern' => '/@version\s*(.*)$/',
+      'lines'   => 100,
+    ),
+    'files' => array(
+      'php' => array(
+        'xmlseclibs.php',
       ),
     ),
   );
@@ -280,6 +308,8 @@ function saml_sp_requirements($phase) {
 
   if ($phase == 'runtime') {
     $t = get_t();
+
+    // php-saml library
     $library = libraries_detect('php-saml');
     $error_type = isset($library['error']) ? drupal_ucfirst($library['error']) : '';
     $error_message = isset($library['error message']) ? $library['error message'] : '';
@@ -289,7 +319,7 @@ function saml_sp_requirements($phase) {
         'title' => $t('PHP SAML library'),
         'value' => $t('@e: At least @a', array('@e' => $error_type, '@a' => PHP_SAML_LIBRARY_MIN_VERSION)),
         'severity' => REQUIREMENT_ERROR,
-        'description' => $t('!error You need to download the !library, extract the archive and place the colorbox directory in the %path directory on your server.', array('!error' => $error_message, '!library' => l($t('PHP SAML library'), $library['download url']), '%path' => 'sites/all/libraries')),
+        'description' => $t('!error You need to download the !library, extract the archive and place the !machine_name directory in the %path directory on your server.', array('!error' => $error_message, '!library' => l($t('PHP SAML library'), $library['download url']), '%path' => 'sites/all/libraries', '!machine_name' => $library['machine_name'])),
       );
     }
     elseif (version_compare($library['version'], PHP_SAML_LIBRARY_MIN_VERSION, '>=')) {
@@ -305,6 +335,37 @@ function saml_sp_requirements($phase) {
         'value' => $t('At least @a', array('@a' => PHP_SAML_LIBRARY_MIN_VERSION)),
         'severity' => REQUIREMENT_ERROR,
         'description' => $t('You need to download a later version of the !library and replace the old version located in the %path directory on your server.', array('!library' => l($t('PHP SAML library'), $library['download url']), '%path' => $library['library path'])),
+      );
+    }
+
+
+    // xmlseclibs library
+    $library = libraries_detect('xmlseclibs');
+    $error_type = isset($library['error']) ? drupal_ucfirst($library['error']) : '';
+    $error_message = isset($library['error message']) ? $library['error message'] : '';
+    $library_name = $t($library['name']);
+
+    if (empty($library['installed'])) {
+      $requirements[$library['machine_name']] = array(
+        'title' => $library_name,
+        'value' => $t('@e: At least @a', array('@e' => $error_type, '@a' => XMLSECLIBS_MIN_VERSION)),
+        'severity' => REQUIREMENT_ERROR,
+        'description' => $t('!error You need to download the !library, extract the archive and place the !machine_name directory in the %path directory on your server.', array('!error' => $error_message, '!library' => l($library_name, $library['download url']), '%path' => 'sites/all/libraries', '!machine_name' => $library['machine_name'])),
+      );
+    }
+    elseif (version_compare($library['version'], XMLSECLIBS_MIN_VERSION, '>=')) {
+      $requirements[$library['machine_name']] = array(
+        'title' => $library_name,
+        'severity' => REQUIREMENT_OK,
+        'value' => $library['version'],
+      );
+    }
+    else {
+      $requirements[$library['machine_name']] = array(
+        'title' => $library_name,
+        'value' => $t('At least @a', array('@a' => XMLSECLIBS_MIN_VERSION)),
+        'severity' => REQUIREMENT_ERROR,
+        'description' => $t('You need to download a later version of the !library and replace the old version located in the %path directory on your server.', array('!library' => l($library_name, $library['download url']), '%path' => $library['library path'])),
       );
     }
   }
@@ -557,6 +618,8 @@ function _saml_sp__default_idp() {
 
 /**
  * Load the required OneLogin SAML-PHP toolkit files.
+ *
+ * this function is a holdover from when the module didn't use libraries
  */
 function _saml_sp__prepare() {
   libraries_load('php-saml');
