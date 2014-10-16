@@ -116,7 +116,7 @@ function saml_sp_menu() {
     'file' => 'saml_sp.admin.inc',
   );
   // metadata specific to an IDP
-  $items['saml/%saml_sp_idp/metadata.xml'] = array(
+  $items['saml/metadata.xml'] = array(
     'page callback' => 'saml_sp__get_metadata',
     'page arguments' => array(1, TRUE),
     'access callback' => TRUE,
@@ -414,6 +414,17 @@ function saml_sp__get_settings($idp) {
  * load the settings and get the metadata
  */
 function saml_sp__get_metadata($idp, $output_page = FALSE) {
+  if (empty($idp)) {
+    // no $idp was given, we will try to see if there is a default one set
+    $idp_selection = variable_get('saml_sp_drupal_login__idp', '');
+    $idp = saml_sp_idp_load($idp_selection);
+    if (empty($idp)) {
+      // there is also no default $idp set so return a page not found
+      drupal_not_found();
+      return;
+    }
+  }
+
   $settings = saml_sp__get_settings($idp);
 
   $auth = new OneLogin_Saml2_Auth($settings);

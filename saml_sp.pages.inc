@@ -43,6 +43,26 @@ function saml_sp__endpoint() {
         $is_valid = FALSE;
       }
 
+      if (!$is_valid) {
+        $error = $saml_response->getError();
+        list($problem) = array_reverse(explode(' ', $error));
+
+        switch ($problem) {
+          case 'Responder':
+            $message = t('There was a problem with the response from @idp_name. Please try again later.', array('@idp_name' => $idp->name));
+            break;
+          case 'Requester':
+            $message = t('There was an issue with the request made to @idp_name. Please try again later.', array('@idp_name' => $idp->name));
+            break;
+          case 'VersionMismatch':
+            $message = t('SAML VersionMismatch between @idp_name and @site_name. Please try again later.', array('@idp_name' => $idp->name, '@site_name' => variable_get('site_name', 'Drupal')));
+            break;
+        }
+        drupal_set_message($message, 'error');
+        watchdog('saml_sp', 'Invalid response, @error', array('@error' => $error));
+      }
+
+
       // Invoke the callback function.
       $callback = $request['callback'];
       $result = $callback($is_valid, $saml_response);
