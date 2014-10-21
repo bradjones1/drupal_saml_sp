@@ -69,9 +69,15 @@ function saml_sp_schema() {
       'app_name' => array(
         'description' => 'Human-readable name to provide to the IDP to identify the application',
         'type' => 'varchar',
-        'length' => 30,
+        'length' => 255,
         'not null' => TRUE,
         'default' => ''
+      ),
+      'entity_id' => array(
+        'description' => 'The entityID of the Identity Provider, possibly a URL',
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => FALSE,
       ),
       'nameid_field' => array(
         'description' => 'Name of the fields where NameID is stored',
@@ -138,4 +144,29 @@ function saml_sp_update_7000(&$sandbox) {
  */
 function saml_sp_update_7001(&$sandbox) {
   db_change_field('saml_sp_idps', 'x509_cert', 'x509_cert', array('type' => 'text', 'not null' => TRUE));
+}
+
+/**
+ * Add the entity_id field to the saml_sp_idps table.
+ */
+function saml_sp_update_7202(&$sandbox) {
+  db_add_field('saml_sp_idps', 'entity_id', array(
+    'description' => 'The entityID of the Identity Provider, possibly a URL',
+    'type' => 'varchar',
+    'length' => '255',
+    'not null' => FALSE,
+  ));
+}
+
+/**
+ * Increase the size of the saml_sp_idps app_name field to 255.
+ */
+function saml_sp_update_7203(&$sandbox) {
+  db_change_field('saml_sp_idps', 'app_name', 'app_name', array(
+    'description' => 'Human-readable name to provide to the IDP to identify the application',
+    'type' => 'varchar',
+    'length' => 255,
+    'not null' => TRUE,
+    'default' => ''
+  ));
 }

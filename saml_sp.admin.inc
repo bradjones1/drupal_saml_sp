@@ -67,12 +67,20 @@ function saml_sp__configure_idp_form($form, &$form_state, $saml_idp = NULL) {
     '#description' => t('A unique machine-readable name for this IDP. It must only contain lowercase letters, numbers, and underscores.'),
   );
 
+  $form['entity_id'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Entity ID'),
+    '#description' => t('The entityID identifier which the Identity Provider will use to identiy itself by, this may sometimes be a URL.'),
+    '#default_value' => $saml_idp->entity_id,
+    '#maxlength' => 255,
+  );
+
   $form['app_name'] = array(
     '#type' => 'textfield',
     '#title' => t('App name'),
     '#description' => t('The app name is provided to the Identiy Provider, to identify the origin of the request.'),
     '#default_value' => $saml_idp->app_name,
-    '#maxlength' => 30,
+    '#maxlength' => 255,
   );
 
   // Adding mail and extra fields to select list
@@ -174,6 +182,7 @@ function saml_sp__configure_idp_form_submit($form, &$form_state) {
     'name'         => $form_state['values']['name'],
     'machine_name' => $form_state['values']['machine_name'],
     'app_name'     => $form_state['values']['app_name'],
+    'entity_id'    => $form_state['values']['entity_id'],
     'nameid_field' => $form_state['values']['nameid_field'],
     'login_url'    => $form_state['values']['idp_login_url'],
     'logout_url'   => $form_state['values']['idp_logout_url'],
@@ -340,7 +349,7 @@ function saml_sp__admin_config() {
   $form['saml_sp__strict'] = array(
     '#type'           => 'checkbox',
     '#title'          => t('Strict Protocol'),
-    '#desciption'     => t('SAML 2 Strict protocol will be used.'),
+    '#description'    => t('SAML 2 Strict protocol will be used.'),
     '#default_value'  => variable_get('saml_sp__strict', FALSE),
   );
 
