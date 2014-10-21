@@ -337,6 +337,13 @@ function saml_sp__admin_config() {
     '#default_value'  => $organization['url'],
   );
 
+  $form['saml_sp__strict'] = array(
+    '#type'           => 'checkbox',
+    '#title'          => t('Strict Protocol'),
+    '#desciption'     => t('SAML 2 Strict protocol will be used.'),
+    '#default_value'  => variable_get('saml_sp__strict', FALSE),
+  );
+
   $security = variable_get('saml_sp__security', array());
   $form['saml_sp__security'] = array(
     '#type'           => 'fieldset',
