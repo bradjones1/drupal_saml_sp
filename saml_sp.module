@@ -531,43 +531,18 @@ function saml_sp__get_metadata($idp, $output_page = FALSE) {
  * A function to call with the results of the SAML authentication process.
  */
 function saml_sp_start($idp, $callback) {
-  global $language;
-  global $base_url;
-  // Settings is an array for creating a Saml2 Settings object.
-  $settings = saml_sp__get_settings($idp);
-  // Creating Saml2 Settings object
-  $saml_settings = new OneLogin_Saml2_Settings($settings);
-  $auth_request = new OneLogin_Saml2_AuthnRequest($saml_settings);
-  $saml_request = $auth_request->getRequest();
-
-  $parameters = array('SAMLRequest' => $saml_request);
-
-  // Return the user to a sensible path
   if (isset($_GET['returnTo'])) {
     // If a returnTo parameter is present, then use that
-    $parameters['RelayState'] = $_GET['returnTo'];
+    $return_to = $_GET['returnTo'];
   }
   else {
     // By default user is returned to the front page in the same language
-    $parameters['RelayState'] = $base_url . '/' . $language->prefix;
+    $return_to = $base_url . '/' . $language->prefix;
   }
-  $idp_data = $saml_settings->getIdPData();
-  $sso_url = $idp_data['singleSignOnService']['url'];
-  $url = OneLogin_Saml2_Utils::redirect($sso_url, $parameters, TRUE);
 
-  // Track the ID of the outbound request.
-  $prefix_length = strlen($idp->login_url . "?SAMLRequest=");
-  $id = _saml_sp__extract_outbound_id(substr($url, $prefix_length));
-  watchdog('saml_sp', 'Extracted outbound ID for SAML login: %id', array('%id' => $id));
-  saml_sp__track_request($id, $idp, $callback);
-
-  // Passing current language as parameter, so that IdP can display UI
-  // in correct language. IdP might not use the value or use a different
-  // parameter.
-  // TODO: Maybe the parameter name should be configurable?
-  $url = $url . '&language=' . $language->language;
-  // Redirect the user to the IDP.
-  header("Location: $url");
+  $settings = saml_sp__get_settings($idp);tdpm($settings, '$settings');
+  $auth = new OneLogin_Saml2_Auth($settings);
+  $auth->login($return_to);
 }
 
 /**

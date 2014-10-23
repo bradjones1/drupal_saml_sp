@@ -331,7 +331,7 @@ function saml_sp__admin_config() {
   $security = variable_get('saml_sp__security', array());
   $form['saml_sp__security'] = array(
     '#type'           => 'fieldset',
-    '#title'          => 'security',
+    '#title'          => t('Security'),
     '#tree'           => TRUE,
   );
   $form['saml_sp__security']['offered'] = array(
