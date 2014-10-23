@@ -138,31 +138,6 @@ function saml_sp__configure_idp_form($form, &$form_state, $saml_idp = NULL) {
     '#type' => 'submit',
     '#value' => t('Save settings'),
   );
-  try {
-    $metadata = saml_sp__get_metadata($saml_idp);
-  }
-  catch (Exception $e) {
-    drupal_set_message(t('Attempt to create metadata failed: %message.', array('%message' => $e->getMessage())), 'error');
-    $metadata = '';
-  }
-
-  if ($show_metadata) {
-    $form['idp']['metadata'] = array(
-      '#type'         => 'fieldset',
-      '#collapsed'    => TRUE,
-      '#collapsible'  => TRUE,
-      '#title'        => t('Metadata'),
-      '#description'  => t('This is the Federation Metadata for this IDp'),
-    );
-    $form['idp']['metadata']['data'] = array(
-      '#type'           => 'textarea',
-      '#title'          => t('XML'),
-      '#description'    => t('This metadata can also be accessed at !link', array('!link' => l(saml_sp__metadata_url($saml_idp), saml_sp__metadata_url($saml_idp)))),
-      '#disabled'       => TRUE,
-      '#rows'           => 20,
-      '#default_value'  => $metadata,
-    );
-  }
 
   return $form;
 }
@@ -359,16 +334,56 @@ function saml_sp__admin_config() {
     '#title'          => 'security',
     '#tree'           => TRUE,
   );
+  $form['saml_sp__security']['offered'] = array(
+    //'#type'           => 'markup',
+    '#markup'          => t('Signatures and Encryptions Offered:'),
+  );
+  $form['saml_sp__security']['nameIdEncrypted'] = array(
+    '#type'           => 'checkbox',
+    '#title'          => t('NameID Encrypted'),
+    '#default_value'  => $security['nameIdEncrypted'],
+  );
   $form['saml_sp__security']['authnRequestsSigned'] = array(
     '#type'           => 'checkbox',
     '#title'          => t('Authn Requests Signed'),
     '#default_value'  => $security['authnRequestsSigned'],
+  );
+  $form['saml_sp__security']['logoutRequestSigned'] = array(
+    '#type'           => 'checkbox',
+    '#title'          => t('Logout Requests Signed'),
+    '#default_value'  => $security['logoutRequestSigned'],
+  );
+  $form['saml_sp__security']['logoutResponseSigned'] = array(
+    '#type'           => 'checkbox',
+    '#title'          => t('Logout Response Signed'),
+    '#default_value'  => $security['logoutResponseSigned'],
+  );
+
+  $form['saml_sp__security']['required'] = array(
+    //'#type'           => 'markup',
+    '#markup'          => t('Signatures and Encryptions Required:'),
+  );
+  $form['saml_sp__security']['wantMessagesSigned'] = array(
+    '#type'           => 'checkbox',
+    '#title'          => t('Want Messages Signed'),
+    '#default_value'  => $security['wantMessagesSigned'],
   );
   $form['saml_sp__security']['wantAssertionsSigned'] = array(
     '#type'           => 'checkbox',
     '#title'          => t('Want Assertions Signed'),
     '#default_value'  => $security['wantAssertionsSigned'],
   );
+  $form['saml_sp__security']['wantNameIdEncrypted'] = array(
+    '#type'           => 'checkbox',
+    '#title'          => t('Want NameID Encrypted'),
+    '#default_value'  => $security['wantNameIdEncrypted'],
+  );
+  $form['saml_sp__security']['metadata'] = array(
+    //'#type'           => 'markup',
+    '#markup'          => t('Metadata:'),
+  );
+
+
   $form['saml_sp__security']['signMetaData'] = array(
     '#type'           => 'checkbox',
     '#title'          => t('Sign Meta Data'),
@@ -387,6 +402,39 @@ function saml_sp__admin_config() {
     '#description'  => t('The location of the x.509 key file on the server. This must be a location that PHP can read.'),
     '#default_value' => $security['saml_sp__key_location'],
   );
+
+  try {
+    $metadata = saml_sp__get_metadata(NULL, FALSE);
+  }
+  catch (Exception $e) {
+    drupal_set_message(t('Attempt to create metadata failed: %message.', array('%message' => $e->getMessage())), 'error');
+    $metadata = '';
+  }
+  $no_metadata = t('There is currently no metadata because there is not a default IdP selected on the <a href="!url" target="_blank">Drupal Login</a> page. Please configure a default IdP and return here for your metadata.', array('!url' => url('admin/config/people/saml_sp/drupal_login')));
+  $form['metadata'] = array(
+    '#type'         => 'fieldset',
+    '#collapsed'    => TRUE,
+    '#collapsible'  => TRUE,
+    '#title'        => t('Metadata'),
+    '#description'  => t('This is the Federation Metadata for this IdP'),
+  );
+
+  if ($metadata) {
+    $form['metadata']['data'] = array(
+      '#type'           => 'textarea',
+      '#title'          => t('XML'),
+      '#description'    => t('This metadata can also be accessed at !link', array('!link' => l(saml_sp__metadata_url($saml_idp), saml_sp__metadata_url()))),
+      '#disabled'       => TRUE,
+      '#rows'           => 20,
+      '#default_value'  => $metadata,
+    );
+  }
+  else {
+    $form['metadata']['none'] = array(
+      '#markup'         => $no_metadata,
+    );
+  }
+
 
   return system_settings_form($form);
 }

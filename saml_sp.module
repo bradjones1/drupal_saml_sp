@@ -119,7 +119,7 @@ function saml_sp_menu() {
   // metadata specific to an IDP
   $items['saml/metadata.xml'] = array(
     'page callback' => 'saml_sp__get_metadata',
-    'page arguments' => array(1, TRUE),
+    'page arguments' => array(NULL, TRUE),
     'access callback' => TRUE,
   );
 
@@ -163,8 +163,8 @@ function saml_sp__menu_title($title, $idp) {
 /**
  * generate a url for the idp metadata
  */
-function saml_sp__metadata_url($idp) {
-  return url('saml/' . $idp->machine_name . '/metadata.xml', array('absolute' => TRUE));
+function saml_sp__metadata_url() {
+  return url('saml/metadata.xml', array('absolute' => TRUE));
 }
 
 
@@ -449,9 +449,17 @@ function saml_sp__get_settings($idp) {
   // add the security settings
   $security = variable_get('saml_sp__security', array());
   $settings['security'] = array (
-    'authnRequestsSigned' => (bool) $security['authnRequestsSigned'],
-    'wantAssertionsSigned' => (bool) $security['wantAssertionsSigned'],
-    'signMetadata' => (bool) $security['signMetaData'],
+    // signatures and encryptions offered
+    'nameIdEncrypted'       => (bool) $security['nameIdEncrypted'],
+    'authnRequestsSigned'   => (bool) $security['authnRequestsSigned'],
+    'logoutRequestSigned'   => (bool) $security['logoutRequestSigned'],
+    'logoutResponseSigned'  => (bool) $security['logoutResponseSigned'],
+    // Sign the Metadata
+    'signMetadata'          => (bool) $security['signMetaData'],
+    // signatures and encryptions required
+    'wantMessagesSigned'    => (bool) $security['wantMessagesSigned'],
+    'wantAssertionsSigned'  => (bool) $security['wantAssertionsSigned'],
+    'wantNameIdEncrypted'   => (bool) $security['wantNameIdEncrypted'],
   );
 
   if ($security['saml_sp__cert_location'] && file_exists($security['saml_sp__cert_location'])) {
@@ -477,12 +485,19 @@ function saml_sp__get_settings($idp) {
 function saml_sp__get_metadata($idp, $output_page = FALSE) {
   if (empty($idp)) {
     // no $idp was given, we will try to see if there is a default one set
-    $idp_selection = variable_get('saml_sp_drupal_login__idp', '');
+    $idp_selection = variable_get('saml_sp_drupal_login__idp', '');tdpm($idp_selection, '$idp_selection');
     $idp = saml_sp_idp_load($idp_selection);
     if (empty($idp)) {
-      // there is also no default $idp set so return a page not found
-      drupal_not_found();
-      return;
+      // there is also no default $idp set
+      if ($output_page) {
+        // so return a page not found
+        drupal_not_found();
+        return;
+      }
+      else {
+        // return FALSE
+        return FALSE;
+      }
     }
   }
 
