@@ -112,7 +112,7 @@ function saml_sp_drupal_login__get_idp() {
 /**
  * SAML authentication callback.
  */
-function saml_sp_drupal_login__saml_authenticate($is_valid, OneLogin_Saml2_Response $saml_response) {
+function saml_sp_drupal_login__saml_authenticate($is_valid, saml_sp_Response $saml_response) {
   if ($is_valid) {
     $attributes = $saml_response->getAttributes();
 
