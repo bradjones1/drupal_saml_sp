@@ -7,3 +7,5 @@ package = SAML
 
 dependencies[] = ctools
 dependencies[] = libraries
+
+files[] = includes/saml_sp.Auth.inc
