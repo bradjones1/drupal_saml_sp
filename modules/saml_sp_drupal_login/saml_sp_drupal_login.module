@@ -265,3 +265,53 @@ function saml_sp_drupal_login_get_uid($name_id, $field_name, $email = NULL) {
     return $uid;
   }
 }
+
+/**
+ * Implements hook_user_logout
+ */
+function saml_sp_user_logout($account) {
+  if (!variable_get('saml_sp_drupal_login__logout', TRUE)) {
+    // the site doesn't want the IdP to be signed out of,
+    // so just log out of Drupal
+    return;
+  }
+  global $language;
+  global $base_url;
+
+  // Load the IDP to authenticate against.
+  $idp = saml_sp_drupal_login__get_idp();
+  // Settings is an array
+  $settings = saml_sp__get_settings($idp);
+  // Creating Saml2 Settings object from array
+  $saml_settings = new OneLogin_Saml2_Settings($settings);
+  $idp_data = $saml_settings->getIdPData();
+
+  // Checking if logout url is configured
+  if (isset($idp_data['singleLogoutService']) && isset($idp_data['singleLogoutService']['url'])) {
+      $slo_url = $idp_data['singleLogoutService']['url'];
+  }
+  else {
+      throw new Exception("The IdP does not support Single Log Out");
+  }
+
+  // Creating a logout request to be passed to IdP
+  if (isset($_SESSION['IdPSessionIndex']) && !empty($_SESSION['IdPSessionIndex'])) {
+      $logout_request = new OneLogin_Saml2_LogoutRequest($saml_settings, NULL, $_SESSION['IdPSessionIndex']);
+  }
+  else {
+      $logout_request = new OneLogin_Saml2_LogoutRequest($saml_settings);
+  }
+
+  $saml_request = $logout_request->getRequest();
+  $parameters = array('SAMLRequest' => $saml_request);
+  // Checking current language, so that user can be redirected to front page
+  // in same language
+  $parameters['RelayState'] = $base_url . '/' . $language->prefix;
+  $url = OneLogin_Saml2_Utils::redirect($slo_url, $parameters, TRUE);
+  watchdog('saml_sp', 'Session closed for %name (%uid) and starting SAML SLO.', array('%name' => $account->name, '%uid' => $account->uid));
+  // Force redirection in drupal_goto().
+  unset($_GET['destination']);
+  if(!empty($saml_request)) {
+    drupal_goto($url);
+  }
+}

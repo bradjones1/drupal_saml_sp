@@ -17,9 +17,17 @@ function saml_sp_drupal_login__admin_config_form($form, &$form_state) {
   $form['saml_sp_drupal_login__idp'] = array(
     '#type' => 'select',
     '#options' => $idps,
-    '#title' => t('IDP'),
-    '#description' => t('Choose the IDP to use when authenticating Drupal logins'),
+    '#title' => t('IdP'),
+    '#description' => t('Choose the IdP to use when authenticating Drupal logins'),
     '#default_value' => variable_get('saml_sp_drupal_login__idp', ''),
   );
+
+  $form['saml_sp_drupal_login__logout'] = array(
+    '#type'           => 'checkbox',
+    '#title'          => t('Single Log Out'),
+    '#description'    => t('When logging out of %site_name also log out of the IdP', array('%site_name' => variable_get('site_name', 'Drupal'))),
+    '#default_value'  => variable_get('saml_sp_drupal_login__logout', TRUE),
+  );
+
   return system_settings_form($form);
 }
