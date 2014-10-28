@@ -128,10 +128,28 @@ function saml_sp__configure_idp_form($form, &$form_state, $saml_idp = NULL) {
   $form['idp']['idp_x509_cert'] = array(
     '#type' => 'textarea',
     '#title' => t('x.509 Certificate'),
-    '#description' => t('Enter the application certificate provided by the IDP.'),
+    '#description' => t('Enter the application certificate provided by the IdP.'),
     '#default_value' => $saml_idp->x509_cert,
     '#required' => TRUE,
     '#max_length' => 1024,
+  );
+
+  $authn_context_class_ref_options = array(
+    'urn:oasis:names:tc:SAML:2.0:ac:classes:Password'                   => t('User Name and Password'),
+    'urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport' => t('Password Protected Transport'),
+    'urn:oasis:names:tc:SAML:2.0:ac:classes:TLSClient'                  => t('Transport Layer Security (TLS) Client'),
+    'urn:oasis:names:tc:SAML:2.0:ac:classes:X509'                       => t('X.509 Certificate'),
+    'urn:federation:authentication:windows'                             => t('Integrated Windows Authentication'),
+    'urn:oasis:names:tc:SAML:2.0:ac:classes:Kerberos'                   => t('Kerberos'),
+  );
+
+  $form['idp']['authn_context_class_ref'] = array(
+    '#type'           => 'select',
+    '#title'          => t('Authentication Method'),
+    '#description'    => t('What authentication method would you like to use with this IdP?'),
+    '#default_value'  => $saml_idp->authn_context_class_ref,
+    '#options'        => $authn_context_class_ref_options,
+    '#required'       => TRUE,
   );
 
   $form['submit'] = array(
@@ -154,15 +172,16 @@ function saml_sp__configure_idp_form_submit($form, &$form_state) {
   }
 
   $idp = (object) array(
-    'name'         => $form_state['values']['name'],
-    'machine_name' => $form_state['values']['machine_name'],
-    'app_name'     => $form_state['values']['app_name'],
-    'entity_id'    => $form_state['values']['entity_id'],
-    'nameid_field' => $form_state['values']['nameid_field'],
-    'login_url'    => $form_state['values']['idp_login_url'],
-    'logout_url'   => $form_state['values']['idp_logout_url'],
-    'x509_cert'    => $form_state['values']['idp_x509_cert'],
-    'export_type'  => $form_state['values']['export_type'],
+    'name'                    => $form_state['values']['name'],
+    'machine_name'            => $form_state['values']['machine_name'],
+    'app_name'                => $form_state['values']['app_name'],
+    'entity_id'               => $form_state['values']['entity_id'],
+    'nameid_field'            => $form_state['values']['nameid_field'],
+    'login_url'               => $form_state['values']['idp_login_url'],
+    'logout_url'              => $form_state['values']['idp_logout_url'],
+    'x509_cert'               => $form_state['values']['idp_x509_cert'],
+    'authn_context_class_ref' => $form_state['values']['authn_context_class_ref'],
+    'export_type'             => $form_state['values']['export_type'],
   );
 
   // Machine names can be changed.
@@ -173,15 +192,15 @@ function saml_sp__configure_idp_form_submit($form, &$form_state) {
   $result = saml_sp_idp_save($idp);
   switch ($result) {
     case SAVED_NEW:
-      drupal_set_message(t('IDP %idp_name has been created.', array('%idp_name' => $form_state['values']['name'])));
+      drupal_set_message(t('IdP %idp_name has been created.', array('%idp_name' => $form_state['values']['name'])));
       break;
 
     case SAVED_UPDATED:
-      drupal_set_message(t('IDP %idp_name has been updated.', array('%idp_name' => $form_state['values']['name'])));
+      drupal_set_message(t('IdP %idp_name has been updated.', array('%idp_name' => $form_state['values']['name'])));
       break;
 
     default:
-      drupal_set_message(t('An error occurred, IDP %idp_name has not been saved.', array('%idp_name' => $form_state['values']['name'])), 'error');
+      drupal_set_message(t('An error occurred, IdP %idp_name has not been saved.', array('%idp_name' => $form_state['values']['name'])), 'error');
       break;
   }
 }

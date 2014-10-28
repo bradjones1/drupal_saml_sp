@@ -103,6 +103,13 @@ function saml_sp_schema() {
         'type' => 'text',
         'not null' => TRUE,
       ),
+      'authn_context_class_ref' => array(
+        'description' => 'Preferred authentication method.',
+        'type' => 'varchar',
+        'length' => '100',
+        'not null' => TRUE,
+        'default' => 'urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport',
+      ),
     ),
     'primary key' => array('machine_name'),
   );
@@ -168,5 +175,18 @@ function saml_sp_update_7203(&$sandbox) {
     'length' => 255,
     'not null' => TRUE,
     'default' => ''
+  ));
+}
+
+/**
+ * Add the authn_context_class_ref field to the saml_sp_idps table.
+ */
+function saml_sp_update_7204(&$sandbox) {
+  db_add_field('saml_sp_idps', 'authn_context_class_ref', array(
+    'description' => 'Preferred authentication method.',
+    'type' => 'varchar',
+    'length' => '100',
+    'not null' => TRUE,
+    'default' => 'urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport',
   ));
 }

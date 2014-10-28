@@ -394,20 +394,24 @@ function saml_sp__get_settings($idp) {
 
   $settings['idp']['entityId'] = $idp->machine_name;
 
-  // URL to login of the IDP server.
+  // URL to login of the IdP server.
   $settings['idp']['singleSignOnService']['url'] = $idp->login_url;
 
-  // URL to logout of the IDP server.
+  // URL to logout of the IdP server.
   $settings['idp']['singleLogoutService'] = array(
     'url' => $idp->logout_url,
     'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
   );
 
-  // The IDP's public x.509 certificate.
+  // The IdP's public x.509 certificate.
   $settings['idp']['x509cert'] = $idp->x509_cert;
+
+  // The authentication method we want to use with the IdP
+  $settings['idp']['AuthnContextClassRef'] = $idp->authn_context_class_ref;
 
   // Name to identify IdP
   $settings['idp']['entityId'] = $idp->entity_id;
+
 
   $settings['strict'] = (bool) variable_get('saml_sp__strict', FALSE);
 
@@ -644,6 +648,8 @@ function _saml_sp__default_idp() {
     'login_url' => '',
     'logout_url' => '',
     'x509_cert' => '',
+    'entity_id' => '',
+    'authn_context_class_ref' => 'urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport',
   );
 }
 

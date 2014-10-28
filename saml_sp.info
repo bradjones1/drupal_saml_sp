@@ -10,3 +10,4 @@ dependencies[] = libraries
 
 files[] = includes/saml_sp.Auth.inc
 files[] = includes/saml_sp.Response.inc
+files[] = includes/saml_sp.AuthnRequest.inc

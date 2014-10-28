@@ -12,7 +12,7 @@ class saml_sp_Auth extends OneLogin_Saml2_Auth {
 
     $settings = $this->getSettings();
 
-    $authnRequest = new OneLogin_Saml2_AuthnRequest($settings);
+    $authnRequest = new saml_sp_AuthnRequest($settings);
 
     $samlRequest = $authnRequest->getRequest();
     $parameters['SAMLRequest'] = $samlRequest;

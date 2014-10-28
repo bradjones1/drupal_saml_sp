@@ -203,6 +203,7 @@ function saml_sp_drupal_login__saml_authenticate($is_valid, saml_sp_Response $sa
     $edit = array();
     // Adding redirect path to where user started the login from
     $edit['redirect'] = $_POST['RelayState'];
+    watchdog('SAML', 'User %name logging in through SAML via %idp_name.', array('%name' => $user->name, '%idp_name' => $idp->name));
     user_login_finalize($edit);
   }
   drupal_goto();
