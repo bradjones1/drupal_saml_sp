@@ -686,8 +686,8 @@ function _saml_sp__extract_inbound_id($assertion) {
 }
 
 /**
-* Implements hook_user_login
-*/
+ * Implements hook_user_login
+ */
 function saml_sp_user_login(&$edit, $account) {
   // Redirecting user to desired path
   drupal_goto($edit['redirect']);

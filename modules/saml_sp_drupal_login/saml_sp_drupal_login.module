@@ -125,7 +125,7 @@ function saml_sp_drupal_login__saml_authenticate($is_valid, saml_sp_Response $sa
     // Load the IDP to authenticate against.
     $idp = saml_sp_drupal_login__get_idp();
     // Get the NameID value from response
-    $name_id = $saml_response->getNameId();
+    $name_id = $saml_response->getNameId();tdpm($name_id, '$name_id');
 
     // If email address is not used to identify user,
     // it has to be in the attributes
@@ -141,12 +141,12 @@ function saml_sp_drupal_login__saml_authenticate($is_valid, saml_sp_Response $sa
     else {
       $email = $saml_response->getNameId();
     }
-    if ($uid = saml_sp_drupal_login_get_uid($name_id, $idp->nameid_field, $email)) {
+    if ($uid = saml_sp_drupal_login_get_uid($name_id, $idp->nameid_field, $email)) {tdpm($uid, '$uid');
       // Existing user, try to login.
-      $account = user_load($uid);
+      $account = user_load($uid);tdpm($account, '$account');
 
       // Update email address if it has changed on IdP
-      if ($account->mail != $email) {
+      if (variable_get('saml_sp_drupal_login__update_email', FALSE) && $account->mail != $email) {
         watchdog('saml_sp', 'Updating email address from %old_email to %new_email for UID %uid', array('%old_email' => $account->mail, '%new_email' => $email, '%uid' => $account->uid));
         $wrapper = entity_metadata_wrapper('user', $account);
         $wrapper->mail->set($email);
@@ -156,14 +156,14 @@ function saml_sp_drupal_login__saml_authenticate($is_valid, saml_sp_Response $sa
         drupal_set_message($message);
       }
       // Update language if it has changed on IdP
-      if ($account->language != $language) {
+      if (variable_get('saml_sp_drupal_login__update_language', FALSE) && $account->language != $language) {
         watchdog('saml_sp', 'Updating language from %old_lang to %new_lang for UID %uid', array('%old_lang' => $account->language, '%new_lang' => $language, '%uid' => $account->uid));
         $wrapper = entity_metadata_wrapper('user', $account);
         $wrapper->language->set($language);
         $wrapper->save();
       }
     }
-    else {
+    else if (variable_get('user_register', USER_REGISTER_ADMINISTRATORS_ONLY) != USER_REGISTER_ADMINISTRATORS_ONLY) {
       // New user, register.
       $account = NULL;
       $new_user = array(
@@ -178,6 +178,15 @@ function saml_sp_drupal_login__saml_authenticate($is_valid, saml_sp_Response $sa
       $wrapper->field_nameid->set($name_id);
       $wrapper->save();
       watchdog('saml_sp', 'New SSO user account for %mail with UID %uid' , array('%mail' => $email, '%uid' => $account->uid));
+    }
+    else {
+      // only Administrators can register new users
+      $tokens = array(
+        '%mail'     => $email,
+        '%idp_name' => $idp->name,
+      );
+      drupal_set_message(t('No account matching %mail has been found. Please contact a site administrator.', $tokens), 'warning');
+      watchdog('saml_sp', 'User attempting to login through %idp_name with %mail which doesn\'t match any accounts.' , $tokens);
     }
 
     // @see user_login_name_validate().
@@ -288,18 +297,18 @@ function saml_sp_user_logout($account) {
 
   // Checking if logout url is configured
   if (isset($idp_data['singleLogoutService']) && isset($idp_data['singleLogoutService']['url'])) {
-      $slo_url = $idp_data['singleLogoutService']['url'];
+    $slo_url = $idp_data['singleLogoutService']['url'];
   }
   else {
-      throw new Exception("The IdP does not support Single Log Out");
+    throw new Exception("The IdP does not support Single Log Out");
   }
 
   // Creating a logout request to be passed to IdP
   if (isset($_SESSION['IdPSessionIndex']) && !empty($_SESSION['IdPSessionIndex'])) {
-      $logout_request = new OneLogin_Saml2_LogoutRequest($saml_settings, NULL, $_SESSION['IdPSessionIndex']);
+    $logout_request = new OneLogin_Saml2_LogoutRequest($saml_settings, NULL, $_SESSION['IdPSessionIndex']);
   }
   else {
-      $logout_request = new OneLogin_Saml2_LogoutRequest($saml_settings);
+    $logout_request = new OneLogin_Saml2_LogoutRequest($saml_settings);
   }
 
   $saml_request = $logout_request->getRequest();

@@ -26,7 +26,7 @@ function saml_sp__endpoint() {
       $settings = saml_sp__get_settings($idp);
       // Creating Saml2 Settings object from array
       $saml_settings = new OneLogin_Saml2_Settings($settings);
-      $saml_response = new saml_sp_Response($saml_settings, $_POST['SAMLResponse']);tdpm($saml_response, '$saml_response');
+      $saml_response = new saml_sp_Response($saml_settings, $_POST['SAMLResponse']);tdpm($saml_response->response, 'SAML Response');
 
       // Remove the now-expired tracked request.
       cache_clear_all($inbound_id, 'saml_sp_request_tracking_cache');
