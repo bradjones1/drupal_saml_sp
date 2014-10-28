@@ -546,48 +546,8 @@ function saml_sp_start($idp, $callback) {
 
   $settings = saml_sp__get_settings($idp);
   $auth = new saml_sp_Auth($settings);
+  $auth->setAuthCallback($callback);
   $auth->login($return_to);
-  /*
-  global $language;
-  global $base_url;
-  // Settings is an array for creating a Saml2 Settings object.
-  $settings = saml_sp__get_settings($idp);
-  // Creating Saml2 Settings object
-  $saml_settings = new OneLogin_Saml2_Settings($settings);
-  $auth_request = new OneLogin_Saml2_AuthnRequest($saml_settings);
-  $saml_request = $auth_request->getRequest();
-
-  $parameters = array('SAMLRequest' => $saml_request);
-
-  // Return the user to a sensible path
-  if (isset($_GET['returnTo'])) {
-    // If a returnTo parameter is present, then use that
-    $parameters['RelayState'] = $_GET['returnTo'];
-  }
-  else {
-    // By default user is returned to the front page in the same language
-    $parameters['RelayState'] = $base_url . '/' . $language->prefix;
-  }
-  $idp_data = $saml_settings->getIdPData();
-  $sso_url = $idp_data['singleSignOnService']['url'];
-  $url = OneLogin_Saml2_Utils::redirect($sso_url, $parameters, TRUE);
-
-  // Track the ID of the outbound request.
-  $prefix_length = strlen($idp->login_url . "?SAMLRequest=");
-  $id = _saml_sp__extract_outbound_id(substr($url, $prefix_length));
-  watchdog('saml_sp', 'Extracted outbound ID for SAML login: %id', array('%id' => $id));
-  saml_sp__track_request($id, $idp, $callback);
-
-  // Passing current language as parameter, so that IdP can display UI
-  // in correct language. IdP might not use the value or use a different
-  // parameter.
-  // TODO: Maybe the parameter name should be configurable?
-  $url = $url . '&language=' . $language->language;
-  // Redirect the user to the IDP.
-  tdpm($url, 'goto');
-  drupal_goto('user');
-  //header("Location: $url");
-  */
 }
 
 /**
@@ -600,7 +560,7 @@ function saml_sp_start($idp, $callback) {
  * @param String $callback
  * The function to invoke on completion of a SAML authentication request.
  */
-function saml_sp__track_request($id, $idp, $callback = 'saml_sp_drupal_login__saml_authenticate') {
+function saml_sp__track_request($id, $idp, $callback) {
   $data = array(
     'id' => $id,
     'idp' => $idp->machine_name,

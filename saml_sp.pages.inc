@@ -26,7 +26,7 @@ function saml_sp__endpoint() {
       $settings = saml_sp__get_settings($idp);
       // Creating Saml2 Settings object from array
       $saml_settings = new OneLogin_Saml2_Settings($settings);
-      $saml_response = new saml_sp_Response($saml_settings, $_POST['SAMLResponse']);
+      $saml_response = new saml_sp_Response($saml_settings, $_POST['SAMLResponse']);tdpm($saml_response, '$saml_response');
 
       // Remove the now-expired tracked request.
       cache_clear_all($inbound_id, 'saml_sp_request_tracking_cache');
@@ -70,7 +70,7 @@ function saml_sp__endpoint() {
       // The callback *should* redirect the user to a valid page.
       // Provide a fail-safe just in case it doesn't.
       if (empty($result)) {
-        drupal_goto();
+        drupal_goto('user');
       }
       else {
         return $result;
