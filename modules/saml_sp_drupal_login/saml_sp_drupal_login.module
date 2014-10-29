@@ -143,7 +143,7 @@ function saml_sp_drupal_login__saml_authenticate($is_valid, saml_sp_Response $sa
     }
     if ($uid = saml_sp_drupal_login_get_uid($name_id, $idp->nameid_field, $email)) {
       // Existing user, try to login.
-      $account = user_load($uid);git commit
+      $account = user_load($uid);
 
       // Update email address if it has changed on IdP
       if (variable_get('saml_sp_drupal_login__update_email', FALSE) && $account->mail != $email) {

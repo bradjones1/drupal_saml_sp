@@ -336,7 +336,7 @@ function saml_sp__admin_config() {
   $form['saml_sp__organization']['url'] = array(
     '#type'           => 'textfield',
     '#title'          => t('URL'),
-    '#description'    => t('This is a URL for the prganization'),
+    '#description'    => t('This is a URL for the organization'),
     '#default_value'  => $organization['url'],
   );
 
