@@ -75,12 +75,12 @@ AUTHNREQUEST;
     return $base64Request;
   }
 
-  /**
+    /**
    * Returns the AuthNRequest ID.
    *
    * @return string
    */
   public function getId() {
-    return $this->_id;
+      return $this->_id;
   }
 }

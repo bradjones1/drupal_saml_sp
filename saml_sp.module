@@ -374,13 +374,13 @@ function saml_sp_requirements($phase) {
 }
 
 /**
- * Get the SAML settings for an IDP.
+ * Get the SAML settings for an IdP.
  *
  * @param Object $idp
  * An IDP object, such as that provided by saml_sp_idp_load($machine_name).
  *
  * @return OneLogin_Saml_Settings
- * IDP Settings data.
+ * IdP Settings data.
  */
 function saml_sp__get_settings($idp) {
   // Require all the relevant libraries.
@@ -418,7 +418,7 @@ function saml_sp__get_settings($idp) {
   // Name to identify this application
   $settings['sp']['entityId'] = $idp->app_name;
 
-  // Drupal URL to consume the response from the IDP.
+  // Drupal URL to consume the response from the IdP.
   $settings['sp']['assertionConsumerService'] = array(
     'url' => $endpoint_url,
     'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST',
