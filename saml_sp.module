@@ -415,8 +415,9 @@ function saml_sp__get_settings($idp) {
 
   $settings['strict'] = (bool) variable_get('saml_sp__strict', FALSE);
 
-  // Name to identify this application
-  $settings['sp']['entityId'] = $idp->app_name;
+  // Name to identify this application, if none is given use the absolute URL
+  // instead
+  $settings['sp']['entityId'] = $idp->app_name ? $idp->app_name : url('user', array('absolute' => TRUE));
 
   // Drupal URL to consume the response from the IdP.
   $settings['sp']['assertionConsumerService'] = array(
