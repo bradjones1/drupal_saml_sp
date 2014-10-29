@@ -283,7 +283,7 @@ function saml_sp_user_logout($account) {
   $idp = saml_sp_drupal_login__get_idp('authn_context_class_ref');
 
   // what is the authentication method?
-  switch ($idp['authn_context_class_ref']) {
+  switch ($idp->authn_context_class_ref) {
     case 'urn:federation:authentication:windows':
       // the user is logged in through their Windows account
       // it is impractical to log out of the IdP system as well
