@@ -52,7 +52,7 @@ class saml_sp_Auth extends OneLogin_Saml2_Auth {
 
     // record the outbound Id of the request
     $id = $authnRequest->getId();
-    saml_sp__track_request($id, $idp, $this->auth_callback);tdpm($this, '$this');
+    saml_sp__track_request($id, $idp, $this->auth_callback);
 
     $this->redirectTo($this->getSSOurl(), $parameters);
   }
