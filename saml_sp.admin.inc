@@ -318,7 +318,7 @@ function saml_sp__admin_config() {
   $form['saml_sp__organization'] = array(
     '#type'           => 'fieldset',
     '#title'          => t('Organization'),
-    '#description'    => t('Oraganization information for the federation metadata'),
+    '#description'    => t('Organization information for the federation metadata'),
     '#tree'           => TRUE,
   );
   $form['saml_sp__organization']['name'] = array(
