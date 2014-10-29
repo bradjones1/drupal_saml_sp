@@ -34,7 +34,7 @@ function saml_sp_drupal_login_menu() {
 /**
  * Implements hook_form_FORM_ID_alter().
  */
-function saml_sp_drupal_login_form_user_login_block_alter(&$form, &$form_state) {tdpm(__function__);
+function saml_sp_drupal_login_form_user_login_block_alter(&$form, &$form_state) {
   // Add a "Log in using @idp_name" link to the user-login form, which returns
   // the user back to the same page with the returnTo parameter.
 
@@ -125,7 +125,7 @@ function saml_sp_drupal_login__saml_authenticate($is_valid, saml_sp_Response $sa
     // Load the IDP to authenticate against.
     $idp = saml_sp_drupal_login__get_idp();
     // Get the NameID value from response
-    $name_id = $saml_response->getNameId();tdpm($name_id, '$name_id');
+    $name_id = $saml_response->getNameId();
 
     // If email address is not used to identify user,
     // it has to be in the attributes
@@ -141,9 +141,9 @@ function saml_sp_drupal_login__saml_authenticate($is_valid, saml_sp_Response $sa
     else {
       $email = $saml_response->getNameId();
     }
-    if ($uid = saml_sp_drupal_login_get_uid($name_id, $idp->nameid_field, $email)) {tdpm($uid, '$uid');
+    if ($uid = saml_sp_drupal_login_get_uid($name_id, $idp->nameid_field, $email)) {
       // Existing user, try to login.
-      $account = user_load($uid);tdpm($account, '$account');
+      $account = user_load($uid);git commit
 
       // Update email address if it has changed on IdP
       if (variable_get('saml_sp_drupal_login__update_email', FALSE) && $account->mail != $email) {
