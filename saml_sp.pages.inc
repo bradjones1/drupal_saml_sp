@@ -26,7 +26,7 @@ function saml_sp__endpoint() {
       $settings = saml_sp__get_settings($idp);
       // Creating Saml2 Settings object from array
       $saml_settings = new OneLogin_Saml2_Settings($settings);
-      $saml_response = new saml_sp_Response($saml_settings, $_POST['SAMLResponse']);tdpm($saml_response->response, 'SAML Response');
+      $saml_response = new saml_sp_Response($saml_settings, $_POST['SAMLResponse']);
 
       // Remove the now-expired tracked request.
       cache_clear_all($inbound_id, 'saml_sp_request_tracking_cache');
@@ -58,8 +58,10 @@ function saml_sp__endpoint() {
             $message = t('SAML VersionMismatch between @idp_name and @site_name. Please try again later.', array('@idp_name' => $idp->name, '@site_name' => variable_get('site_name', 'Drupal')));
             break;
         }
-        drupal_set_message($message, 'error');
-        watchdog('saml_sp', 'Invalid response, @error', array('@error' => $error));
+        if (!empty($message)) {
+          drupal_set_message($message, 'error');
+        }
+        watchdog('saml_sp', 'Invalid response, @error: @response', array('@error' => $error, '@response' => print_r($saml_response, TRUE)), WATCHDOG_ERROR);
       }
 
 
