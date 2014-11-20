@@ -196,7 +196,7 @@ function saml_sp_drupal_login__saml_authenticate($is_valid, saml_sp_Response $sa
         '!account_request_url' => url('saml/request_account', array('query' => array('email' => $email))),
       );
       $no_account_message = t('No account matching %mail has been found. Please contact a site administrator.', $tokens);
-      $user_may_request_account_message = t('No account matching %mail has been found. <a href="!account_request_url">Click here to apply for an account.</a>');
+      $user_may_request_account_message = t('No account matching %mail has been found. <a href="!account_request_url">Click here to apply for an account.</a>', $tokens);
       if (variable_get('saml_sp_drupal_login__request_account', 0)) {
         $no_account_message = $user_may_request_account_message;
       }
