@@ -43,5 +43,58 @@ function saml_sp_drupal_login__admin_config_form($form, &$form_state) {
     '#default_value'  => variable_get('saml_sp_drupal_login__update_language', TRUE),
   );
 
+  $form['account_request'] = array(
+    '#type'           => 'fieldset',
+    '#title'          => t('Account Request'),
+    '#description'    => t('Allow Users to request account creation.'),
+    '#access'         => (variable_get('user_register', USER_REGISTER_ADMINISTRATORS_ONLY) == USER_REGISTER_ADMINISTRATORS_ONLY ? 1 : 0),
+  );
+
+  $form['account_request']['saml_sp_drupal_login__request_account'] = array(
+    '#type'           => 'checkbox',
+    '#title'          => t('Allow users without an account to request an account?'),
+    '#description'    => t('Since you only allow Administrators to create an account: <a href="!account_settings_url" target="_blank">see Account Settings page</a> should the user who authenticates against the SAML IdP be able to request an account from administrators?', array('!account_settings_url' => url('admin/config/people/accounts'))),
+    '#default_value'  => variable_get('saml_sp_drupal_login__request_account', 0),
+  );
+
+  $form['account_request']['saml_sp_drupal_login__account_request_site_mail'] = array(
+    '#type'           => 'checkbox',
+    '#title'          => t('Send request to site mail account ( @site_mail )', array('@site_mail' => variable_get('site_mail', ''))),
+    '#default_value'  => variable_get('saml_sp_drupal_login__account_request_site_mail', FALSE),
+    '#states'         => array(
+      'visible'         => array(
+        ':input[name="saml_sp_drupal_login__request_account"]' => array('checked' => TRUE),
+      ),
+    ),
+  );
+
+  $admin_role = variable_get('user_admin_role', 3);
+
+  $query = db_select('users', 'u');
+  $query->fields('u', array('uid', 'name', 'mail'));
+  $query->join('users_roles', 'ur', 'ur.uid=u.uid');
+  $query->condition('ur.rid', $admin_role); // the user has the admin role
+  $query->condition('u.status', 1); // the user is active (not blocked)
+
+  $result = $query->execute();
+  $admin_options = array();
+  foreach ($result->fetchAllAssoc('uid') AS $u) {
+    $admin_options[$u->uid] = $u->name . ' - ' . $u->mail;
+  }
+
+  $form['account_request']['saml_sp_drupal_login__account_request_site_administrators'] = array(
+    '#type'           => 'checkboxes',
+    '#title'          => t('Send request to Site Administrators'),
+    '#description'    => t('The request email will be sent to these site Administrators'),
+    '#options'        => $admin_options,
+    '#default_value'  => variable_get('saml_sp_drupal_login__account_request_site_administrators', FALSE),
+    '#states'         => array(
+      'visible'         => array(
+        ':input[name="saml_sp_drupal_login__request_account"]' => array('checked' => TRUE),
+      ),
+    ),
+  );
+
+
   return system_settings_form($form);
 }

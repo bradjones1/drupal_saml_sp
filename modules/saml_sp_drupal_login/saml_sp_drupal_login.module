@@ -28,6 +28,15 @@ function saml_sp_drupal_login_menu() {
     'access callback' => TRUE,
     'type' => MENU_CALLBACK,
   );
+
+  // allow a user to request an account
+  $items['saml/request_account'] = array(
+    'title'           => 'Request an Account',
+    'page callback'   => 'drupal_get_form',
+    'page arguments'  => array('saml_sp_drupal_login__request_access'),
+    'access callback' => 'user_is_anonymous',
+    'file'            => 'saml_sp_drupal_login.pages.inc',
+  );
   return $items;
 }
 
@@ -184,8 +193,14 @@ function saml_sp_drupal_login__saml_authenticate($is_valid, saml_sp_Response $sa
       $tokens = array(
         '%mail'     => $email,
         '%idp_name' => $idp->name,
+        '!account_request_url' => url('saml/request_account', array('query' => array('email' => $email))),
       );
-      drupal_set_message(t('No account matching %mail has been found. Please contact a site administrator.', $tokens), 'warning');
+      $no_account_message = t('No account matching %mail has been found. Please contact a site administrator.', $tokens);
+      $user_may_request_account_message = t('No account matching %mail has been found. <a href="!account_request_url">Click here to apply for an account.</a>');
+      if (variable_get('saml_sp_drupal_login__request_account', 0)) {
+        $no_account_message = $user_may_request_account_message;
+      }
+      drupal_set_message($no_account_message, 'warning');
       watchdog('saml_sp', 'User attempting to login through %idp_name with %mail which doesn\'t match any accounts.' , $tokens);
     }
 
@@ -334,4 +349,26 @@ function saml_sp_user_logout($account) {
   if(!empty($saml_request)) {
     drupal_goto($url);
   }
+}
+
+/**
+ * Implements hook_mail().
+ */
+function saml_sp_drupal_login_mail($key, &$message, $params) {
+  $langcode = $message['language']->language;
+  switch ($key) {
+    case 'account_request':
+      $replacements = array(
+        '@site_name'     => variable_get('site_name', 'Drupal'),
+        '@mail'        => $params['mail'],
+        '@name'         => $params['name'],
+        '@explanation'  => $params['explanation'],
+      );
+      $message['subject'] = t('Account request for @site_name.', $replacements, array('langcode' => $langcode));
+      $message['body'][] = t('@name would like an account set up on @site_name using the e-mail address @mail.', $replacements, array('langcode' => $langcode));
+      $message['body'][] = t('The explanation given is:', $replacements, array('langcode' => $langcode));
+      $message['body'][] = t('@explanation', $replacements, array('langcode' => $langcode));
+      break;
+  }
+
 }

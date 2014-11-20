@@ -61,7 +61,7 @@ function saml_sp__endpoint() {
         if (!empty($message)) {
           drupal_set_message($message, 'error');
         }
-        watchdog('saml_sp', 'Invalid response, @error: @response', array('@error' => $error, '@response' => print_r($saml_response, TRUE)), WATCHDOG_ERROR);
+        watchdog('saml_sp', 'Invalid response, @error: <pre>@response</pre>', array('@error' => $error, '@response' => print_r($saml_response, TRUE)), WATCHDOG_ERROR);
       }
 
 
