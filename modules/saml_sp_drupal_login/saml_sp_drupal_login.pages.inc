@@ -97,5 +97,5 @@ function saml_sp_drupal_login__request_access_submit($form, &$form_state) {
   }
 
   drupal_set_message(t('Your account creation request has been submitted to site administrators. They will inform you of the results.'));
-  drupal_goto('user');s
+  drupal_goto('user');
 }
