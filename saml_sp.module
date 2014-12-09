@@ -710,8 +710,10 @@ function saml_sp_form_alter(&$form, &$form_state, $form_id) {
       $form['account']['mail']['#description'] = t('Email address cannot be changed here, because the information comes from the SSO server. You need to change it there instead. After it has been changed, you need to logout and login to this service to see the updated address.');
       // Disable all password fields because they need to be changed on the IdP
       // server
-      $validate_unset = array_search('user_validate_current_pass', $form['#validate']);
-      unset($form['#validate'][$validate_unset], $form['account']['pass'], $form['account']['current_pass']);
+      // are we sure that we want to remoev all password fields? some
+      // configurations they will still want to allow for separate Drupal logins
+      //$validate_unset = array_search('user_validate_current_pass', $form['#validate']);
+      //unset($form['#validate'][$validate_unset], $form['account']['pass'], $form['account']['current_pass']);
     break;
    }
 }
