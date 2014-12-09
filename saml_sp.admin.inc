@@ -408,18 +408,18 @@ function saml_sp__admin_config() {
     '#title'          => t('Sign Meta Data'),
     '#default_value'  => $security['signMetaData'],
   );
-  $form['saml_sp__security']['saml_sp__cert_location'] = array(
+  $form['saml_sp__cert_location'] = array(
     '#type'   => 'textfield',
     '#title'  => t('Certificate Location'),
     '#description'  => t('The location of the x.509 certificate file on the server. This must be a location that PHP can read.'),
-    '#default_value' => $security['saml_sp__cert_location'],
+    '#default_value' => variable_get('saml_sp__cert_location', ''),
   );
 
-  $form['saml_sp__security']['saml_sp__key_location'] = array(
+  $form['saml_sp__key_location'] = array(
     '#type'   => 'textfield',
     '#title'  => t('Key Location'),
     '#description'  => t('The location of the x.509 key file on the server. This must be a location that PHP can read.'),
-    '#default_value' => $security['saml_sp__key_location'],
+    '#default_value' => variable_get('saml_sp__key_location', ''),
   );
 
   try {

@@ -467,8 +467,9 @@ function saml_sp__get_settings($idp) {
     'wantNameIdEncrypted'   => (bool) $security['wantNameIdEncrypted'],
   );
 
-  if ($security['saml_sp__cert_location'] && file_exists($security['saml_sp__cert_location'])) {
-    $settings['sp']['x509cert'] = file_get_contents($security['saml_sp__cert_location']);
+  $cert_location = variable_get('saml_sp__cert_location', '');
+  if ($cert_location && file_exists($cert_location)) {
+    $settings['sp']['x509cert'] = file_get_contents($cert_location);
   }
 
   // Invoke hook_saml_sp_settings_alter().
@@ -476,8 +477,9 @@ function saml_sp__get_settings($idp) {
 
   // we are adding in the private key after the alter function because we don't
   // want to risk the private key getting out and in the hands of a rogue module
-  if ($security['saml_sp__key_location'] && file_exists($security['saml_sp__key_location'])) {
-    $settings['sp']['privateKey'] = file_get_contents($security['saml_sp__key_location']);
+  $key_location = variable_get('saml_sp__key_location', '');
+  if ($key_location && file_exists($key_location)) {
+    $settings['sp']['privateKey'] = file_get_contents($key_location);
   }
   return $settings;
 }

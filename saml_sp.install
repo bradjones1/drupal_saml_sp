@@ -120,10 +120,16 @@ function saml_sp_schema() {
 /**
  * Implements hook_uninstall().
  *
- * Cleans up variable.
+ * Cleans up variables.
  */
 function saml_sp_uninstall() {
   variable_del('saml_sp_drupal_login__idp');
+  variable_del('saml_sp__cert_location');
+  variable_del('saml_sp__key_location');
+  variable_del('saml_sp__security');
+  variable_del('saml_sp__strict');
+  variable_del('saml_sp__organization');
+  variable_dev('saml_sp__contact');
 }
 
 // /**
@@ -189,4 +195,14 @@ function saml_sp_update_7204(&$sandbox) {
     'not null' => TRUE,
     'default' => 'urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport',
   ));
+}
+
+/**
+ * move the cert and key locations out of the security variables and into their
+ * own variables so they can be excluded from features
+ */
+function saml_sp_update_7205() {
+  $security = variable_get('saml_sp__security', array());
+  variable_set('saml_sp__key_location', $security['saml_sp__key_location']);
+  variable_set('saml_sp__cert_location', $security['saml_sp__cert_location']);
 }
