@@ -37,6 +37,7 @@ function saml_sp_drupal_login_menu() {
     'access callback' => 'user_is_anonymous',
     'file'            => 'saml_sp_drupal_login.pages.inc',
   );
+
   return $items;
 }
 
@@ -188,6 +189,10 @@ function saml_sp_drupal_login__saml_authenticate($is_valid, saml_sp_Response $sa
       $wrapper->save();
       watchdog('saml_sp', 'New SSO user account for %mail with UID %uid' , array('%mail' => $email, '%uid' => $account->uid));
     }
+    else if (variable_get('saml_sp_drupal_login__no_account_authenticated_user_role', FALSE) && variable_get('saml_sp_drupal_login__no_account_authenticated_user_account', FALSE)) {
+      // the user has no account but the setting allows for them to get an authenticated role
+      $account = user_load_by_name(variable_get('saml_sp_drupal_login__no_account_authenticated_user_account', FALSE));
+    }
     else {
       // only Administrators can register new users
       $tokens = array(
@@ -227,7 +232,7 @@ function saml_sp_drupal_login__saml_authenticate($is_valid, saml_sp_Response $sa
     $edit = array();
     // Adding redirect path to where user started the login from
     $edit['redirect'] = $_POST['RelayState'];
-    watchdog('SAML', 'User %name logging in through SAML via %idp_name.', array('%name' => $user->name, '%idp_name' => $idp->name));
+    watchdog('SAML', 'User %name logging in through SAML via %idp_name. with NameID %mail', array('%name' => $user->name, '%idp_name' => $idp->name, '%mail' => $email));
     user_login_finalize($edit);
   }
   drupal_goto();

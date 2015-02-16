@@ -43,9 +43,29 @@ function saml_sp_drupal_login__admin_config_form($form, &$form_state) {
     '#default_value'  => variable_get('saml_sp_drupal_login__update_language', TRUE),
   );
 
+  $form['saml_sp_drupal_login__no_account_authenticated_user_role'] = array(
+    '#type'           => 'checkbox',
+    '#title'          => t('Login users without a user account as an authenticated user.'),
+    '#description'    => t('If a user is authenticated by the SAML Service Provider but no matching account can be found the user will be logged in as an authenticated user. This will allow users to be authenticated to receive more permissions than an anonymous user but less than a user with any other role.'),
+    '#default_value'  => variable_get('saml_sp_drupal_login__no_account_authenticated_user_role', FALSE),
+  );
+
+  $form['saml_sp_drupal_login__no_account_authenticated_user_account'] = array(
+    '#type'               => 'textfield',
+    '#title'              => t('Authenticated user account'),
+    '#description'        => t('This is the account with only the authenticated user role which a user is logged in as is no matching account exists.'),
+    '#default_value'      => variable_get('saml_sp_drupal_login__no_account_authenticated_user_account', ''),
+    '#autocomplete_path'  => 'user/autocomplete',
+    '#states'             => array(
+      'visible'             => array(
+        ':input[name="saml_sp_drupal_login__no_account_authenticated_user_role"]' => array('checked' => TRUE),
+      ),
+    ),
+  );
+
   $form['account_request'] = array(
     '#type'           => 'fieldset',
-    '#title'          => t('Account Request'),
+    '#title'          => t('Accounts'),
     '#description'    => t('Allow Users to request account creation.'),
     '#access'         => (variable_get('user_register', USER_REGISTER_ADMINISTRATORS_ONLY) == USER_REGISTER_ADMINISTRATORS_ONLY ? 1 : 0),
   );
