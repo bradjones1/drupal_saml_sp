@@ -53,7 +53,7 @@ function saml_sp_drupal_login__admin_config_form($form, &$form_state) {
   $form['saml_sp_drupal_login__no_account_authenticated_user_account'] = array(
     '#type'               => 'textfield',
     '#title'              => t('Authenticated user account'),
-    '#description'        => t('This is the account with only the authenticated user role which a user is logged in as is no matching account exists.'),
+    '#description'        => t('This is the account with only the authenticated user role which a user is logged in as if no matching account exists. As this account will be used for all users make sure that this account has only the "Authenticated User" role.'),
     '#default_value'      => variable_get('saml_sp_drupal_login__no_account_authenticated_user_account', ''),
     '#autocomplete_path'  => 'user/autocomplete',
     '#states'             => array(
