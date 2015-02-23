@@ -699,6 +699,9 @@ function saml_sp_user_login(&$edit, $account) {
 /**
  * Implements hook_form_alter().
  */
+ /**
+  * comment out the changes to the user form which is causing problems... this
+  * will be uncommented when a better solution conceived of.
 function saml_sp_form_alter(&$form, &$form_state, $form_id) {
    switch ($form_id) {
     case 'user_profile_form' :
@@ -717,3 +720,4 @@ function saml_sp_form_alter(&$form, &$form_state, $form_id) {
     break;
    }
 }
+*/
