@@ -64,6 +64,10 @@ function saml_sp_drupal_login_form_user_login_block_alter(&$form, &$form_state) 
     '#attributes' => array('class' => array('saml_sp_drupal_login-links')),
     '#weight' => 1,
   );
+
+  if ( variable_get('saml_sp_drupal_login__force_saml_only', FALSE)) {
+    drupal_goto('saml/drupal_login', array('query' => array('returnTo' => 'user')));
+  }
 }
 
 /**
@@ -95,6 +99,11 @@ function saml_sp_drupal_login_form_user_login_alter(&$form, &$form_state) {
     '#attributes' => array('class' => array('saml_sp_drupal_login-links')),
     '#weight' => 1,
   );
+
+  if ( variable_get('saml_sp_drupal_login__force_saml_only', FALSE)) {
+    drupal_goto('saml/drupal_login', array('query' => array('returnTo' => 'user')));
+  }
+
 }
 
 /**
