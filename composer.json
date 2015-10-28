@@ -1,0 +1,11 @@
+{
+  "name": "drupal/saml_sp",
+  "description": "Provides SAML SP support",
+  "type": "drupal-module",
+  "license": "GPL-2.0+",
+  "keywords": ["user access", "authentication"],
+  "minimum-stability": "dev",
+  "require": {
+    "simplesamlphp/simplesamlphp": "1.13.*"
+  }
+}
